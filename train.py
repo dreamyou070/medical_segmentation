@@ -60,7 +60,8 @@ def main(args):
         segmentation_head_class = Segmentation_Head_c
     segmentation_head = segmentation_head_class(n_classes=args.n_classes,
                                                 mask_res=args.mask_res,
-                                                use_batchnorm=args.use_batchnorm)
+                                                use_batchnorm=args.use_batchnorm,
+                                                use_instance_norm=args.use_instance_norm,),
                                                 #norm_type=args.norm_type,)
 
 
@@ -321,8 +322,7 @@ if __name__ == "__main__":
     parser.add_argument("--check_training", action='store_true')
     parser.add_argument("--pretrained_segmentation_model", type=str)
     parser.add_argument("--use_batchnorm", action='store_true')
-
-
+    parser.add_argument("--use_instance_norm", action='store_true')
     parser.add_argument("--aggregation_model_a", action='store_true')
     parser.add_argument("--aggregation_model_b", action='store_true')
     parser.add_argument("--aggregation_model_c", action='store_true')
