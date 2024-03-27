@@ -42,7 +42,7 @@ class DoubleConv(nn.Module):
 
 class Up(nn.Module):
     """Upscaling then double conv"""
-    def __init__(self, in_channels, out_channels, bilinear=True, use_batchnorm = True, norm_type = 'batch_norm')
+    def __init__(self, in_channels, out_channels, bilinear=True, use_batchnorm = True, norm_type = 'batch_norm') :
         super().__init__()
         # if bilinear, use the normal convolutions to reduce the number of channels
         if bilinear:
