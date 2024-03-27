@@ -16,7 +16,13 @@ from utils.optimizer import get_optimizer, get_scheduler_fix
 from utils.saving import save_model
 from utils.loss import FocalLoss, Multiclass_FocalLoss
 from utils.evaluate import evaluation_check
-from model.segmentation_unet import Segmentation_Head_a, Segmentation_Head_b, Segmentation_Head_c
+from model.segmentation_unet import Segmentation_Head_a as sha
+from model.segmentation_unet import Segmentation_Head_b as shb
+from model.segmentation_unet import Segmentation_Head_c as shc
+from model.segmentation_unet_org import Segmentation_Head_a as sha_org
+from model.segmentation_unet_org import Segmentation_Head_b as shb_org
+from model.segmentation_unet_org import Segmentation_Head_c as shc_org
+
 
 def main(args):
 
@@ -44,18 +50,23 @@ def main(args):
     weight_dtype, save_dtype = prepare_dtype(args)
     text_encoder, vae, unet, network, position_embedder = call_model_package(args, weight_dtype, accelerator)
 
-    if args.aggregation_model_a:
-        segmentation_head = Segmentation_Head_a(n_classes=args.n_classes,
-                                                mask_res=args.mask_res,
-                                                norm_type=args.norm_type,)
-    if args.aggregation_model_b :
-        segmentation_head = Segmentation_Head_b(n_classes=args.n_classes,
-                                                      mask_res=args.mask_res,
-                                                      norm_type=args.norm_type,)
-    if args.aggregation_model_c :
-        segmentation_head = Segmentation_Head_c(n_classes=args.n_classes,
+    if args.use_new_code :
+        if args.aggregation_model_a:
+            segmentation_head = sha(n_classes=args.n_classes,
                                                     mask_res=args.mask_res,
                                                     norm_type=args.norm_type,)
+        if args.aggregation_model_b :
+            segmentation_head = shb(n_classes=args.n_classes,
+                                                          mask_res=args.mask_res,
+                                                          norm_type=args.norm_type,)
+        if args.aggregation_model_c :
+            segmentation_head = shc(n_classes=args.n_classes,
+                                                        mask_res=args.mask_res,
+                                                        norm_type=args.norm_type,)
+    else :
+        if args.aggregation_model_a:
+            segmentation_head = sha_org(n_classes=args.n_classes,
+                                        mask_res=args.mask_res,)
 
     print(f'\n step 5. optimizer')
     args.max_train_steps = len(train_dataloader) * args.max_train_epochs
@@ -308,6 +319,7 @@ if __name__ == "__main__":
     parser.add_argument("--use_focal_loss", action='store_true')
     parser.add_argument("--position_embedder_weights", type=str, default=None)
     parser.add_argument("--use_position_embedder", action='store_true')
+    parser.add_argument("--use_new_code", action='store_true')
     parser.add_argument("--check_training", action='store_true')
     parser.add_argument("--pretrained_segmentation_model", type=str)
     parser.add_argument("--do_attn_loss", action='store_true')
