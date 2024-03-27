@@ -10,24 +10,31 @@ import torch.nn.functional as F
 
 class DoubleConv(nn.Module):
     """(convolution => [BN] => ReLU) * 2"""
-    def __init__(self, in_channels, out_channels, mid_channels=None, use_batchnorm = True):
+    def __init__(self, in_channels, out_channels, mid_channels=None, use_batchnorm = True, norm_type = 'batch_norm'):
         super().__init__()
         if not mid_channels:
             mid_channels = out_channels
 
-        if use_batchnorm :
+        if norm_type == 'batch_norm' :
             self.double_conv = nn.Sequential(nn.Conv2d(in_channels, mid_channels, kernel_size=3, padding=1, bias=False),
                                              nn.BatchNorm2d(mid_channels),
                                              nn.ReLU(inplace=True),
                                              nn.Conv2d(mid_channels, out_channels, kernel_size=3, padding=1, bias=False),
                                              nn.BatchNorm2d(out_channels),
                                              nn.ReLU(inplace=True))
-        else :
+        elif norm_type == 'layer_norm' :
             self.double_conv = nn.Sequential(nn.Conv2d(in_channels, mid_channels, kernel_size=3, padding=1, bias=False),
                                              nn.LayerNorm([mid_channels, int(20480/mid_channels),int(20480/mid_channels)]),
                                              nn.ReLU(inplace=True),
                                              nn.Conv2d(mid_channels, out_channels, kernel_size=3, padding=1,bias=False),
                                              nn.LayerNorm([mid_channels, int(20480 / mid_channels), int(20480 / mid_channels)]),
+                                             nn.ReLU(inplace=True))
+        elif norm_type == 'instance_norm' :
+            self.double_conv = nn.Sequential(nn.Conv2d(in_channels, mid_channels, kernel_size=3, padding=1, bias=False),
+                                             nn.InstanceNorm2d(mid_channels),
+                                             nn.ReLU(inplace=True),
+                                             nn.Conv2d(mid_channels, out_channels, kernel_size=3, padding=1, bias=False),
+                                             nn.InstanceNorm2d(out_channels),
                                              nn.ReLU(inplace=True))
     def forward(self, x):
         return self.double_conv(x)
@@ -35,15 +42,15 @@ class DoubleConv(nn.Module):
 
 class Up(nn.Module):
     """Upscaling then double conv"""
-    def __init__(self, in_channels, out_channels, bilinear=True, use_batchnorm = True ):
+    def __init__(self, in_channels, out_channels, bilinear=True, use_batchnorm = True, norm_type = 'batch_norm')
         super().__init__()
         # if bilinear, use the normal convolutions to reduce the number of channels
         if bilinear:
             self.up = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)
-            self.conv = DoubleConv(in_channels, out_channels, in_channels // 2)
-        else:
+            self.conv = DoubleConv(in_channels, out_channels, in_channels // 2, norm_type=norm_type) # This use batchnorm
+        else: # Here
             self.up = nn.ConvTranspose2d(in_channels, in_channels // 2, kernel_size=2, stride=2)
-            self.conv = DoubleConv(in_channels, out_channels, use_batchnorm = use_batchnorm)
+            self.conv = DoubleConv(in_channels, out_channels, use_batchnorm = use_batchnorm, norm_type=norm_type)
 
     def forward(self, x1, x2):
 
@@ -87,24 +94,24 @@ class Segmentation_Head_a(nn.Module):
                  n_classes,
                  bilinear=False,
                  use_batchnorm=True,
-                 mask_res = 128):
+                 mask_res = 128,
+                 norm_type = 'batch_norm' ):
         super(Segmentation_Head_a, self).__init__()
 
         self.n_classes = n_classes
         self.mask_res = mask_res
         self.bilinear = bilinear
         factor = 2 if bilinear else 1
-        self.up1 = (Up(1280, 640 // factor, bilinear, use_batchnorm))
-        self.up2 = (Up(640, 320 // factor, bilinear, use_batchnorm))
-        self.up3 = (Up_conv(in_channels = 320,
+        self.up1 = Up(1280, 640 // factor, bilinear, use_batchnorm, norm_type)
+        self.up2 = Up(640, 320 // factor, bilinear, use_batchnorm, norm_type)
+        self.up3 = Up_conv(in_channels = 320,
                             out_channels = 160,
-                            kernel_size=2)) # 64 -> 128 , channel 320 -> 160
+                            kernel_size=2) # 64 -> 128 , channel 320 -> 160
         if self.mask_res == 256 :
-            self.up4 = (Up_conv(in_channels = 160,
+            self.up4 = Up_conv(in_channels = 160,
                                 out_channels = 160,
-                                kernel_size=2))  # 128 -> 256
-        self.outc = (OutConv(160, n_classes))
-
+                                kernel_size=2)  # 128 -> 256
+        self.outc = OutConv(160, n_classes)
     def forward(self, x16_out, x32_out, x64_out):
 
         x = self.up1(x16_out,x32_out)  # 1,640,32,32 -> 640*32
@@ -118,20 +125,19 @@ class Segmentation_Head_a(nn.Module):
         return logits
 
 
-
-
 class Segmentation_Head_b(nn.Module):
 
-    def __init__(self,  n_classes, bilinear=False, use_batchnorm=True, mask_res = 128):
+    def __init__(self,  n_classes, bilinear=False, use_batchnorm=True, mask_res = 128,
+                 norm_type = 'batch_norm'):
         super(Segmentation_Head_b, self).__init__()
 
         self.n_classes = n_classes
         self.mask_res = mask_res
         self.bilinear = bilinear
         factor = 2 if bilinear else 1
-        self.up1 = (Up(1280, 640 // factor, bilinear, use_batchnorm))
-        self.up2 = (Up(640, 320 // factor, bilinear, use_batchnorm))
-        self.up3 = (Up(640, 320 // factor, bilinear, use_batchnorm))
+        self.up1 = (Up(1280, 640 // factor, bilinear, use_batchnorm, norm_type))
+        self.up2 = (Up(640, 320 // factor, bilinear, use_batchnorm, norm_type))
+        self.up3 = (Up(640, 320 // factor, bilinear, use_batchnorm, norm_type))
         self.up4 = (Up_conv(in_channels = 320,
                             out_channels=160,
                             kernel_size=2))
@@ -156,16 +162,16 @@ class Segmentation_Head_b(nn.Module):
 
 class Segmentation_Head_c(nn.Module):
 
-    def __init__(self,  n_classes, bilinear=False, use_batchnorm=True, mask_res = 128):
+    def __init__(self,  n_classes, bilinear=False, use_batchnorm=True, mask_res = 128, norm_type = 'batch_norm'):
         super(Segmentation_Head_c, self).__init__()
 
         self.n_classes = n_classes
         self.mask_res = mask_res
         self.bilinear = bilinear
-        factor = 2 if bilinear else 1
-        self.up1 = (Up(1280, 640 // factor, bilinear, use_batchnorm))
-        self.up2 = (Up(640, 320 // factor, bilinear, use_batchnorm))
-        self.up3 = (Up(640, 320 // factor, bilinear, use_batchnorm))
+        factor = 2 if bilinear else 1 # always 1
+        self.up1 = (Up(1280, 640 // factor, bilinear, use_batchnorm, norm_type))
+        self.up2 = (Up(640, 320 // factor, bilinear, use_batchnorm, norm_type))
+        self.up3 = (Up(640, 320 // factor, bilinear, use_batchnorm, norm_type))
         self.up4 = (Up_conv(in_channels = 640,
                             out_channels = 320,
                             kernel_size=2))
@@ -188,11 +194,3 @@ class Segmentation_Head_c(nn.Module):
             x_in = x5_out
         logits = self.outc(x_in)  # 1,3,256,256
         return logits
-"""
-x16_out = torch.randn(1, 1280, 16, 16)
-x32_out = torch.randn(1, 640, 32, 32)
-x64_out = torch.randn(1, 320, 64, 64)
-model = Segmentation_Head_c(3)
-logits = model(x16_out, x32_out, x64_out)
-print(logits.shape) # torch.Size([1, 3, 256, 256])
-"""

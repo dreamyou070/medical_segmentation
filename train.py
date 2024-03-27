@@ -7,8 +7,7 @@ import os
 from attention_store import AttentionStore
 from data import call_dataset
 from model import call_model_package
-
-
+from model.segmentation_unet import Segmentation_Head_a, Segmentation_Head_b, Segmentation_Head_c
 from model.diffusion_model import transform_models_if_DDP
 from model.unet import unet_passing_argument
 from utils import prepare_dtype, arg_as_list, reshape_batch_dim_to_heads
@@ -19,6 +18,7 @@ from utils.saving import save_model
 from utils.loss import FocalLoss, Multiclass_FocalLoss
 from utils.evaluate import evaluation_check
 
+from safetensors.torch import load_file
 def main(args):
 
     print(f'\n step 1. setting')
@@ -43,28 +43,24 @@ def main(args):
 
     print(f'\n step 4. model')
     weight_dtype, save_dtype = prepare_dtype(args)
-    text_encoder, vae, unet, network, position_embedder = call_model_package(args, weight_dtype, accelerator)
+    text_encoder, vae, unet, network = call_model_package(args, weight_dtype, accelerator)
+    # [2] pe
+    from model.pe import AllPositionalEmbedding
+    position_embedder = AllPositionalEmbedding(pe_do_concat = args.pe_do_concat)
+    if args.position_embedder_weights is not None:
+        position_embedder_state_dict = load_file(args.position_embedder_weights)
+        position_embedder.load_state_dict(position_embedder_state_dict)
+        position_embedder.to(dtype=weight_dtype)
 
-    if args.use_original_seg_unet :
-        from model.segmentation_unet import Segmentation_Head_a, Segmentation_Head_b, Segmentation_Head_c
+    if args.aggregation_model_a:
         segmentation_head_class = Segmentation_Head_a
-        if args.aggregation_model_b :
-            segmentation_head_class = Segmentation_Head_b
-        if args.aggregation_model_c :
-            segmentation_head_class = Segmentation_Head_c
-        segmentation_head = segmentation_head_class(n_classes=args.n_classes,
-                                                    mask_res=args.mask_res)
-    elif args.use_new_seg_unet :
-        from model.segmentation_unet_new import Segmentation_Head_a, Segmentation_Head_b, Segmentation_Head_c
-        segmentation_head_class = Segmentation_Head_a
-        if args.aggregation_model_b:
-            segmentation_head_class = Segmentation_Head_b
-        if args.aggregation_model_c:
-            segmentation_head_class = Segmentation_Head_c
-        segmentation_head = segmentation_head_class(n_classes=args.n_classes,
-                                                    mask_res=args.mask_res,
-                                                    norm_type=args.norm_type,
-                                                    non_linearity=args.non_linearity,)
+    if args.aggregation_model_b :
+        segmentation_head_class = Segmentation_Head_b
+    if args.aggregation_model_c :
+        segmentation_head_class = Segmentation_Head_c
+    segmentation_head = segmentation_head_class(n_classes=args.n_classes,
+                                                mask_res=args.mask_res,
+                                                norm_type=args.norm_type,)
 
 
 
@@ -199,12 +195,12 @@ def main(args):
             if args.use_position_embedder :
                 save_model(args,
                            saving_folder='position_embedder',
-                           saving_name = f'position_embedder-{saving_epoch}.safetensors',
+                           saving_name = f'position_embedder-{saving_epoch}.pt',
                            unwrapped_nw=accelerator.unwrap_model(position_embedder),
                            save_dtype=save_dtype)
             save_model(args,
                        saving_folder='segmentation',
-                       saving_name = f'segmentation-{saving_epoch}.safetensors',
+                       saving_name = f'segmentation-{saving_epoch}.pt',
                        unwrapped_nw=accelerator.unwrap_model(segmentation_head),
                        save_dtype=save_dtype)
         # ----------------------------------------------------------------------------------------------------------- #
@@ -268,6 +264,7 @@ if __name__ == "__main__":
     parser.add_argument("--no_half_vae", action="store_true",
                         help="do not use fp16/bf16 VAE in mixed precision (use float VAE) / mixed precision", )
     parser.add_argument("--position_embedding_layer", type=str)
+    parser.add_argument("--pe_do_concat", action='store_true')
     parser.add_argument("--d_dim", default=320, type=int)
     # step 4. model
     parser.add_argument('--pretrained_model_name_or_path', type=str, default='facebook/diffusion-dalle')
@@ -322,13 +319,14 @@ if __name__ == "__main__":
     parser.add_argument("--use_position_embedder", action='store_true')
     parser.add_argument("--check_training", action='store_true')
     parser.add_argument("--pretrained_segmentation_model", type=str)
-    parser.add_argument("--do_attn_loss", action='store_true')
+
+
+    parser.add_argument("--aggregation_model_a", action='store_true')
     parser.add_argument("--aggregation_model_b", action='store_true')
     parser.add_argument("--aggregation_model_c", action='store_true')
-    parser.add_argument("--use_original_seg_unet", action='store_true')
-    parser.add_argument("--use_new_seg_unet", action='store_true')
     parser.add_argument("--norm_type", type=str, default='batchnorm', choices=['batchnorm', 'instancenorm', 'layernorm'])
     parser.add_argument("--non_linearity", type=str, default='relu', choices=['relu', 'leakyrelu', 'gelu'])
+
     args = parser.parse_args()
     unet_passing_argument(args)
     passing_argument(args)

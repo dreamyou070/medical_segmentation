@@ -40,12 +40,4 @@ def call_model_package(args, weight_dtype, accelerator):
         info = network.load_weights(args.network_weights)
     network.to(weight_dtype)
 
-    # [3] PE
-    position_embedder = AllPositionalEmbedding()
-    if args.position_embedder_weights is not None :
-        from safetensors.torch import load_file
-        position_embedder_state_dict = load_file(args.position_embedder_weights)
-        position_embedder.load_state_dict(position_embedder_state_dict)
-        position_embedder.to(dtype=weight_dtype)
-
-    return text_encoder, vae, unet, network, position_embedder
+    return text_encoder, vae, unet, network
