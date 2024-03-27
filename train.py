@@ -16,6 +16,7 @@ from utils.optimizer import get_optimizer, get_scheduler_fix
 from utils.saving import save_model
 from utils.loss import FocalLoss, Multiclass_FocalLoss
 from utils.evaluate import evaluation_check
+from model.segmentation_unet import Segmentation_Head_a, Segmentation_Head_b, Segmentation_Head_c
 
 def main(args):
 
@@ -43,29 +44,15 @@ def main(args):
     weight_dtype, save_dtype = prepare_dtype(args)
     text_encoder, vae, unet, network, position_embedder = call_model_package(args, weight_dtype, accelerator)
 
-    if args.use_original_seg_unet :
-        from model.segmentation_unet import Segmentation_Head_a, Segmentation_Head_b, Segmentation_Head_c
+    if args.aggregation_model_a:
         segmentation_head_class = Segmentation_Head_a
-        if args.aggregation_model_b :
-            segmentation_head_class = Segmentation_Head_b
-        if args.aggregation_model_c :
-            segmentation_head_class = Segmentation_Head_c
-        segmentation_head = segmentation_head_class(n_classes=args.n_classes,
-                                                    mask_res=args.mask_res)
-    elif args.use_new_seg_unet :
-        from model.segmentation_unet_new import Segmentation_Head_a, Segmentation_Head_b, Segmentation_Head_c
-        segmentation_head_class = Segmentation_Head_a
-        if args.aggregation_model_b:
-            segmentation_head_class = Segmentation_Head_b
-        if args.aggregation_model_c:
-            segmentation_head_class = Segmentation_Head_c
-        segmentation_head = segmentation_head_class(n_classes=args.n_classes,
-                                                    mask_res=args.mask_res,
-                                                    norm_type=args.norm_type,
-                                                    non_linearity=args.non_linearity,)
-
-
-
+    if args.aggregation_model_b :
+        segmentation_head_class = Segmentation_Head_b
+    if args.aggregation_model_c :
+        segmentation_head_class = Segmentation_Head_c
+    segmentation_head = segmentation_head_class(n_classes=args.n_classes,
+                                                mask_res=args.mask_res,
+                                                norm_type=args.norm_type,)
 
     print(f'\n step 5. optimizer')
     args.max_train_steps = len(train_dataloader) * args.max_train_epochs
@@ -321,11 +308,10 @@ if __name__ == "__main__":
     parser.add_argument("--check_training", action='store_true')
     parser.add_argument("--pretrained_segmentation_model", type=str)
     parser.add_argument("--do_attn_loss", action='store_true')
+    parser.add_argument("--aggregation_model_a", action='store_true')
     parser.add_argument("--aggregation_model_b", action='store_true')
     parser.add_argument("--aggregation_model_c", action='store_true')
-    parser.add_argument("--use_original_seg_unet", action='store_true')
-    parser.add_argument("--use_new_seg_unet", action='store_true')
-    parser.add_argument("--norm_type", type=str, default='batchnorm', choices=['batchnorm', 'instancenorm', 'layernorm'])
+    parser.add_argument("--norm_type", type=str, default='batchnorm', choices=['batch_norm', 'instance_norm', 'layer_norm'])
     parser.add_argument("--non_linearity", type=str, default='relu', choices=['relu', 'leakyrelu', 'gelu'])
     args = parser.parse_args()
     unet_passing_argument(args)
