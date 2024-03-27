@@ -45,14 +45,17 @@ def main(args):
     text_encoder, vae, unet, network, position_embedder = call_model_package(args, weight_dtype, accelerator)
 
     if args.aggregation_model_a:
-        segmentation_head_class = Segmentation_Head_a
-    if args.aggregation_model_b :
-        segmentation_head_class = Segmentation_Head_b
-    if args.aggregation_model_c :
-        segmentation_head_class = Segmentation_Head_c
-    segmentation_head = segmentation_head_class(n_classes=args.n_classes,
+        segmentation_head = Segmentation_Head_a(n_classes=args.n_classes,
                                                 mask_res=args.mask_res,
                                                 norm_type=args.norm_type,)
+    if args.aggregation_model_b :
+        segmentation_head = Segmentation_Head_b(n_classes=args.n_classes,
+                                                      mask_res=args.mask_res,
+                                                      norm_type=args.norm_type,)
+    if args.aggregation_model_c :
+        segmentation_head = Segmentation_Head_c(n_classes=args.n_classes,
+                                                    mask_res=args.mask_res,
+                                                    norm_type=args.norm_type,)
 
     print(f'\n step 5. optimizer')
     args.max_train_steps = len(train_dataloader) * args.max_train_epochs
@@ -60,7 +63,6 @@ def main(args):
     if args.use_position_embedder:
         trainable_params.append({"params": position_embedder.parameters(), "lr": args.learning_rate})
     trainable_params.append({"params": segmentation_head.parameters(), "lr": args.learning_rate})
-
     optimizer_name, optimizer_args, optimizer = get_optimizer(args, trainable_params)
 
     print(f'\n step 6. lr')
@@ -172,6 +174,7 @@ def main(args):
                 progress_bar.set_postfix(**loss_dict)
             if global_step >= args.max_train_steps:
                 break
+
         # ----------------------------------------------------------------------------------------------------------- #
         accelerator.wait_for_everyone()
         if is_main_process:
