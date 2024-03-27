@@ -6,7 +6,7 @@
 # 5_pe_concat_segmentation_model_a_cross_focal_batch_norm_head
 # 6_pe_concat_segmentation_model_a_cross_focal_instance_norm_head
 
-port_number=50005
+port_number=50001
 category="medical"
 obj_name="leader_polyp"
 benchmark="bkai-igh-neopolyp"
