@@ -47,6 +47,7 @@ class SinglePositionalEmbedding_concat(nn.Module):
         # [1] concat query and position_embedder
         x = torch.cat([x, pe], dim=2)
         # [2] reshape query (dimension reduction)
+        self.fc = self.fc.to(x.device)
         x = self.fc(x)
         if start_dim == 4:
             x = einops.rearrange(x, 'b (h w) c -> b c h w', h=res, w=res)
