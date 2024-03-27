@@ -5,7 +5,6 @@ class AttentionStore :
 
         self.query_dict = {}
         self.key_dict = {}
-        self.attn_dict = {}
 
     def get_empty_store(self):
         return {}
@@ -26,19 +25,11 @@ class AttentionStore :
         else:
             self.key_dict[layer_name].append(key)
 
-    def save_attn(self, attn, layer_name):
-
-        if layer_name not in self.attn_dict.keys():
-            self.attn_dict[layer_name] = []
-            self.attn_dict[layer_name].append(attn)
-        else:
-            self.attn_dict[layer_name].append(attn)
 
     def reset(self):
 
         self.query_dict = {}
         self.key_dict = {}
-        self.attn_dict = {}
 
 # layer_name : down_blocks_0_attentions_0_transformer_blocks_0_attn1
 # alpha scale : 0.15811388300841897

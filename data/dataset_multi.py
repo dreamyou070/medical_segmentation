@@ -9,7 +9,6 @@ import cv2
 from tensorflow.keras.utils import to_categorical
 
 
-
 def passing_mvtec_argument(args):
     global argument
 
@@ -106,6 +105,7 @@ class TrainDataset_Seg(Dataset):
         self.n_classes = n_classes
         self.single_modality = single_modality
         self.mask_res = mask_res
+        print(f'self.mask_res = {self.mask_res}')
 
     def __len__(self):
         return len(self.image_paths)
@@ -149,16 +149,22 @@ class TrainDataset_Seg(Dataset):
 
         # [2] gt dir
         gt_path = self.gt_paths[idx]  #
-        gt_arr = np.load(gt_path)     # 128,128
-        # only brain
+        gt_arr = np.load(gt_path)     # 256,256
+
         if self.caption == 'brain':
             gt_arr = np.where(gt_arr==4, 3, gt_arr)
+        if self.n_classes == 2 :
+            gt_arr = np.where(gt_arr > 1, 1, gt_arr)
+
         gt_arr_ = to_categorical(gt_arr)
         class_num = gt_arr_.shape[-1]
-        gt = np.zeros((self.mask_res,self.mask_res,self.n_classes))
-        gt[:,:,:class_num] = gt_arr_
-        gt = torch.tensor(gt).permute(2,0,1)        # 4,128,128
 
+        gt = np.zeros((self.mask_res,   # 256
+                       self.mask_res,   # 256
+                       self.n_classes)) # 3
+        # 256,256,3
+        gt[:,:,:class_num] = gt_arr_
+        gt = torch.tensor(gt).permute(2,0,1)        # 3,256,256
         # [3] gt flatten
         gt_flat = gt_arr.flatten() # 128*128
 
@@ -167,6 +173,6 @@ class TrainDataset_Seg(Dataset):
         input_ids, attention_mask = self.get_input_ids(self.caption)  # input_ids = [77]
 
         return {'image': self.transform(img),  # [3,512,512]
-                "gt": gt,                      # [4,128,128]
+                "gt": gt,                      # [3,256,256]
                 "gt_flat" : gt_flat,           # [128*128]
-                "input_ids": input_ids}
+                "input_ids": input_ids,}

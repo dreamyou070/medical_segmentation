@@ -7,8 +7,8 @@ import os
 from attention_store import AttentionStore
 from data import call_dataset
 from model import call_model_package
-from model.segmentation_unet import Segmentation_Head_a,Segmentation_Head_b,Segmentation_Head_c
-from model.unet_seg2 import Segmentation_Head
+from model.segmentation_unet import Segmentation_Head_a, Segmentation_Head_b, Segmentation_Head_c
+
 from model.diffusion_model import transform_models_if_DDP
 from model.unet import unet_passing_argument
 from utils import prepare_dtype, arg_as_list, reshape_batch_dim_to_heads
@@ -45,12 +45,17 @@ def main(args):
     weight_dtype, save_dtype = prepare_dtype(args)
     text_encoder, vae, unet, network, position_embedder = call_model_package(args, weight_dtype, accelerator)
 
-    if args.aggregation_model_org :
-        segmentation_head = Segmentation_Head(n_classes=args.n_classes,
-                                              mask_res=args.mask_res)
-    else :
-        if args.aggregation_model_a:
-            segmentation_head_class = Segmentation_Head_a
+    if args.use_original_seg_unet :
+        segmentation_head_class = Segmentation_Head_a
+        if args.aggregation_model_b :
+            segmentation_head_class = Segmentation_Head_b
+        if args.aggregation_model_c :
+            segmentation_head_class = Segmentation_Head_c
+        segmentation_head = segmentation_head_class(n_classes=args.n_classes,
+                                                    mask_res=args.mask_res)
+    elif args.use_new_seg_unet :
+        from model.segmentation_unet_new import Segmentation_Head_a, Segmentation_Head_b, Segmentation_Head_c
+        segmentation_head_class = Segmentation_Head_a
         if args.aggregation_model_b:
             segmentation_head_class = Segmentation_Head_b
         if args.aggregation_model_c:
@@ -61,14 +66,14 @@ def main(args):
                                                     non_linearity=args.non_linearity,)
 
 
+
+
     print(f'\n step 5. optimizer')
     args.max_train_steps = len(train_dataloader) * args.max_train_epochs
     trainable_params = network.prepare_optimizer_params(args.text_encoder_lr, args.unet_lr, args.learning_rate)
     if args.use_position_embedder:
-        trainable_params.append({"params": position_embedder.parameters(),
-                                 "lr": args.learning_rate})
-    trainable_params.append({"params": segmentation_head.parameters(),
-                             "lr": args.learning_rate})
+        trainable_params.append({"params": position_embedder.parameters(), "lr": args.learning_rate})
+    trainable_params.append({"params": segmentation_head.parameters(), "lr": args.learning_rate})
 
     optimizer_name, optimizer_args, optimizer = get_optimizer(args, trainable_params)
 
@@ -76,13 +81,18 @@ def main(args):
     lr_scheduler = get_scheduler_fix(args, optimizer, accelerator.num_processes)
 
     print(f'\n step 7. loss function')
-    criterion = nn.CrossEntropyLoss()
-    loss_multi_focal = Multiclass_FocalLoss()
+    loss_CE = nn.CrossEntropyLoss()
+    loss_FC = Multiclass_FocalLoss()
 
     print(f'\n step 8. model to device')
-    segmentation_head, unet, text_encoder, network, optimizer, train_dataloader, test_dataloader, lr_scheduler, position_embedder = \
-        accelerator.prepare(segmentation_head, unet, text_encoder, network, optimizer, train_dataloader,
-                            test_dataloader, lr_scheduler, position_embedder)
+    if args.use_position_embedder :
+        segmentation_head, unet, text_encoder, network, optimizer, train_dataloader, test_dataloader, lr_scheduler, position_embedder = \
+            accelerator.prepare(segmentation_head, unet, text_encoder, network, optimizer, train_dataloader,
+                                test_dataloader, lr_scheduler, position_embedder)
+    else :
+        segmentation_head, unet, text_encoder, network, optimizer, train_dataloader, test_dataloader, lr_scheduler = \
+            accelerator.prepare(segmentation_head, unet, text_encoder, network, optimizer, train_dataloader, test_dataloader, lr_scheduler)
+
     text_encoders = transform_models_if_DDP([text_encoder])
     unet, network = transform_models_if_DDP([unet, network])
     if args.use_position_embedder:
@@ -127,11 +137,14 @@ def main(args):
                 encoder_hidden_states = text_encoder(batch["input_ids"].to(device))["last_hidden_state"]
             image = batch['image'].to(dtype=weight_dtype)                                   # 1,3,512,512
             gt_flat = batch['gt_flat'].to(dtype=weight_dtype)                               # 1,128*128
+            gt = batch['gt'].to(dtype=weight_dtype)                                         # 1,3,256,256
+            gt = gt.permute(0, 2, 3, 1).contiguous()#.view(-1, gt.shape[-1]).contiguous()   # 1,256,256,3
+            gt = gt.view(-1, gt.shape[-1]).contiguous()
             with torch.no_grad():
                 latents = vae.encode(image).latent_dist.sample() * args.vae_scale_factor
             with torch.set_grad_enabled(True):
                 unet(latents, 0, encoder_hidden_states, trg_layer_list=args.trg_layer_list, noise_type=position_embedder)
-            query_dict, key_dict = controller.query_dict, controller.key_dict
+            query_dict, key_dict, attn_dict = controller.query_dict, controller.key_dict, controller.attn_dict
             controller.reset()
             q_dict = {}
             for layer in args.trg_layer_list:
@@ -144,16 +157,14 @@ def main(args):
             masks_pred_ = masks_pred_.view(-1, masks_pred_.shape[-1]).contiguous()
 
             # [5.1] Multiclassification Loss
-            loss = criterion(masks_pred_,  # 1,4,128,128
-                             gt_flat.squeeze().to(torch.long))  # 128*128
+            loss = loss_CE(masks_pred_,  gt_flat.squeeze().to(torch.long))  # 128*128
             loss_dict['cross_entropy_loss'] = loss.item()
 
             # [5.2] Focal Loss
-            focal_loss = loss_multi_focal(masks_pred_,  # N,C
-                                          gt_flat.squeeze().to(masks_pred.device))  # N
+            focal_loss = loss_FC(masks_pred_,gt_flat.squeeze().to(masks_pred.device))  # N
             loss += focal_loss
             loss_dict['focal_loss'] = focal_loss.item()
-            # [5.3] Dice Loss
+
             loss = loss.to(weight_dtype)
             current_loss = loss.detach().item()
             if epoch == args.start_epoch:
@@ -178,21 +189,21 @@ def main(args):
         # ----------------------------------------------------------------------------------------------------------- #
         accelerator.wait_for_everyone()
         if is_main_process:
-            saving_epoch = str(epoch + 1).zfill(6)
+            saving_epoch = str(epoch+1).zfill(6)
             save_model(args,
                        saving_folder='model',
-                       saving_name=f'lora-{saving_epoch}.safetensors',
+                       saving_name = f'lora-{saving_epoch}.safetensors',
                        unwrapped_nw=accelerator.unwrap_model(network),
                        save_dtype=save_dtype)
-            if args.use_position_embedder:
+            if args.use_position_embedder :
                 save_model(args,
                            saving_folder='position_embedder',
-                           saving_name=f'position_embedder-{saving_epoch}.pt',
+                           saving_name = f'position_embedder-{saving_epoch}.safetensors',
                            unwrapped_nw=accelerator.unwrap_model(position_embedder),
                            save_dtype=save_dtype)
             save_model(args,
                        saving_folder='segmentation',
-                       saving_name=f'segmentation-{saving_epoch}.pt',
+                       saving_name = f'segmentation-{saving_epoch}.safetensors',
                        unwrapped_nw=accelerator.unwrap_model(segmentation_head),
                        save_dtype=save_dtype)
         # ----------------------------------------------------------------------------------------------------------- #
@@ -201,11 +212,9 @@ def main(args):
         if args.check_training :
             print(f'test with training data')
             loader = train_dataloader
-        score_dict, confusion_matrix, dice_coeff = evaluation_check(segmentation_head, loader,
-                                                                    accelerator.device,
-                                                                    text_encoder, unet, vae, controller,
-                                                                    weight_dtype,
-                                                                    position_embedder, args)
+        score_dict, confusion_matrix, dice_coeff = evaluation_check(segmentation_head, loader, accelerator.device,
+                                                      text_encoder, unet, vae, controller, weight_dtype,
+                                                      position_embedder, args)
         # saving
         if is_main_process:
             print(f'  - precision dictionary = {score_dict}')
@@ -309,17 +318,16 @@ if __name__ == "__main__":
     parser.add_argument("--trg_layer_list", type=arg_as_list, default=[])
     parser.add_argument("--use_focal_loss", action='store_true')
     parser.add_argument("--position_embedder_weights", type=str, default=None)
-    parser.add_argument("--multiclassification_focal_loss", action='store_true')
     parser.add_argument("--use_position_embedder", action='store_true')
+    parser.add_argument("--check_training", action='store_true')
     parser.add_argument("--pretrained_segmentation_model", type=str)
-    parser.add_argument("--aggregation_model_a", action='store_true')
+    parser.add_argument("--do_attn_loss", action='store_true')
     parser.add_argument("--aggregation_model_b", action='store_true')
     parser.add_argument("--aggregation_model_c", action='store_true')
-    parser.add_argument("--norm_type", type=str, default='batch_norm',
-                        choices=['batch_norm', 'instance_norm', 'layer_norm'])
+    parser.add_argument("--use_original_seg_unet", action='store_true')
+    parser.add_argument("--use_new_seg_unet", action='store_true')
+    parser.add_argument("--norm_type", type=str, default='batchnorm', choices=['batchnorm', 'instancenorm', 'layernorm'])
     parser.add_argument("--non_linearity", type=str, default='relu', choices=['relu', 'leakyrelu', 'gelu'])
-    parser.add_argument("--check_training", action='store_true')
-    parser.add_argument("--aggregation_model_org", action='store_true')
     args = parser.parse_args()
     unet_passing_argument(args)
     passing_argument(args)
