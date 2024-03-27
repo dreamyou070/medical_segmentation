@@ -46,13 +46,11 @@ def evaluation_check(segmentation_head, dataloader, device, text_encoder, unet, 
             masks_pred = segmentation_head(x16_out, x32_out, x64_out) # 1,4,128,128
             #######################################################################################################################
             # [1] pred
-            class_num = masks_pred.shape[1]
-            mask_pred_ = masks_pred.permute(0, 2, 3, 1).detach().cpu().numpy()  # 1,128,128,4
-            mask_pred_argmax = np.argmax(mask_pred_, axis=3).flatten()          # 128*128
-            y_pred_list.append(torch.Tensor(mask_pred_argmax))
-
-            mask_true = gt_flat.detach().cpu().numpy().flatten()                # 128*128
-            y_true_list.append(torch.Tensor(mask_true))
+            class_num = masks_pred.shape[1]  # 4
+            mask_pred_argmax = torch.argmax(masks_pred, dim=1).flatten()  # 256*256
+            y_pred_list.append(mask_pred_argmax)
+            y_true = gt_flat.squeeze()
+            y_true_list.append(y_true)
         y_pred = torch.cat(y_pred_list)
         y_pred = F.one_hot(y_pred, num_classes=class_num)  # [pixel_num, C]
         y_true = torch.cat(y_true_list).long()  # [pixel_num]
