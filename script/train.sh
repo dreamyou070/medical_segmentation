@@ -9,10 +9,10 @@
 port_number=50002
 category="medical"
 obj_name="leader_polyp"
-benchmark="bkai-igh-neopolyp"
+benchmark="PolypGen2021_save"
 layer_name='layer_3'
 sub_folder="up_16_32_64"
-file_name="10_pe_basic_segmentation_model_a_cross_focal_use_batchnorm"
+file_name="1_pe_basic_segmentation_model_a_cross_focal_use_batchnorm"
 #
 accelerate launch --config_file ../../../gpu_config/gpu_0_1_config \
  --main_process_port $port_number ../train.py --log_with wandb \
@@ -30,5 +30,5 @@ accelerate launch --config_file ../../../gpu_config/gpu_0_1_config \
                     'up_blocks_3_attentions_2_transformer_blocks_0_attn2',]" \
  --use_position_embedder \
  --aggregation_model_a \
- --n_classes 3 \
+ --n_classes 2 \
  --mask_res 256 --use_batchnorm
