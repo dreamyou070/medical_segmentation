@@ -192,7 +192,7 @@ def main(args):
         # ----------------------------------------------------------------------------------------------------------- #
         # [7] evaluate
         loader = test_dataloader
-        if args.check_training:
+        if args.check_training :
             print(f'test with training data')
             loader = train_dataloader
         score_dict, confusion_matrix, dice_coeff = evaluation_check(segmentation_head, loader,
@@ -312,6 +312,7 @@ if __name__ == "__main__":
     parser.add_argument("--norm_type", type=str, default='batch_norm',
                         choices=['batch_norm', 'instance_norm', 'layer_norm'])
     parser.add_argument("--non_linearity", type=str, default='relu', choices=['relu', 'leakyrelu', 'gelu'])
+    parser.add_argument("--check_training", action='store_true')
     args = parser.parse_args()
     unet_passing_argument(args)
     passing_argument(args)
