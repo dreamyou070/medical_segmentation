@@ -61,11 +61,7 @@ def main(args):
     segmentation_head = segmentation_head_class(n_classes=args.n_classes,
                                                 mask_res=args.mask_res,
                                                 use_batchnorm=args.use_batchnorm,
-                                                use_instance_norm=args.use_instance_norm,),
-                                                #norm_type=args.norm_type,)
-
-
-
+                                                use_instance_norm=args.use_instance_norm,)
 
     print(f'\n step 5. optimizer')
     args.max_train_steps = len(train_dataloader) * args.max_train_epochs

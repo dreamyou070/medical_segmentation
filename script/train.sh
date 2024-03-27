@@ -6,7 +6,7 @@
 # 5_pe_concat_segmentation_model_a_cross_focal_batch_norm_head
 # 6_pe_concat_segmentation_model_a_cross_focal_instance_norm_head
 
-port_number=50015
+port_number=50022
 category="medical"
 obj_name="leader_polyp"
 benchmark="PolypGen2021_save"
