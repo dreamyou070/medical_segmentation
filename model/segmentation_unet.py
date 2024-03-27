@@ -15,6 +15,15 @@ class DoubleConv(nn.Module):
         if not mid_channels:
             mid_channels = out_channels
 
+        self.double_conv = nn.Sequential(nn.Conv2d(in_channels, mid_channels, kernel_size=3, padding=1, bias=False),
+                                         nn.LayerNorm(
+                                             [mid_channels, int(20480 / mid_channels), int(20480 / mid_channels)]),
+                                         nn.ReLU(inplace=True),
+                                         nn.Conv2d(mid_channels, out_channels, kernel_size=3, padding=1, bias=False),
+                                         nn.LayerNorm(
+                                             [mid_channels, int(20480 / mid_channels), int(20480 / mid_channels)]),
+                                         nn.ReLU(inplace=True))
+
         if use_batchnorm :
             self.double_conv = nn.Sequential(nn.Conv2d(in_channels, mid_channels, kernel_size=3, padding=1, bias=False),
                                              nn.BatchNorm2d(mid_channels),
@@ -23,12 +32,7 @@ class DoubleConv(nn.Module):
                                              nn.BatchNorm2d(out_channels),
                                              nn.ReLU(inplace=True))
 
-        self.double_conv = nn.Sequential(nn.Conv2d(in_channels, mid_channels, kernel_size=3, padding=1, bias=False),
-                                         nn.LayerNorm([mid_channels, int(20480/mid_channels),int(20480/mid_channels)]),
-                                         nn.ReLU(inplace=True),
-                                         nn.Conv2d(mid_channels, out_channels, kernel_size=3, padding=1,bias=False),
-                                         nn.LayerNorm([mid_channels, int(20480 / mid_channels), int(20480 / mid_channels)]),
-                                         nn.ReLU(inplace=True))
+
         """
         elif norm_type == 'instance_norm' :
             self.double_conv = nn.Sequential(nn.Conv2d(in_channels, mid_channels, kernel_size=3, padding=1, bias=False),
