@@ -22,13 +22,13 @@ class DoubleConv(nn.Module):
                                              nn.Conv2d(mid_channels, out_channels, kernel_size=3, padding=1, bias=False),
                                              nn.BatchNorm2d(out_channels),
                                              nn.ReLU(inplace=True))
-        else :
-            self.double_conv = nn.Sequential(nn.Conv2d(in_channels, mid_channels, kernel_size=3, padding=1, bias=False),
-                                             nn.LayerNorm([mid_channels, int(20480/mid_channels),int(20480/mid_channels)]),
-                                             nn.ReLU(inplace=True),
-                                             nn.Conv2d(mid_channels, out_channels, kernel_size=3, padding=1,bias=False),
-                                             nn.LayerNorm([mid_channels, int(20480 / mid_channels), int(20480 / mid_channels)]),
-                                             nn.ReLU(inplace=True))
+
+        self.double_conv = nn.Sequential(nn.Conv2d(in_channels, mid_channels, kernel_size=3, padding=1, bias=False),
+                                         nn.LayerNorm([mid_channels, int(20480/mid_channels),int(20480/mid_channels)]),
+                                         nn.ReLU(inplace=True),
+                                         nn.Conv2d(mid_channels, out_channels, kernel_size=3, padding=1,bias=False),
+                                         nn.LayerNorm([mid_channels, int(20480 / mid_channels), int(20480 / mid_channels)]),
+                                         nn.ReLU(inplace=True))
         """
         elif norm_type == 'instance_norm' :
             self.double_conv = nn.Sequential(nn.Conv2d(in_channels, mid_channels, kernel_size=3, padding=1, bias=False),
@@ -98,16 +98,15 @@ class Segmentation_Head_a(nn.Module):
                  n_classes,
                  bilinear=False,
                  use_batchnorm=True,
-                 mask_res = 128,
-                 norm_type = 'batch_norm' ):
+                 mask_res = 128,):
         super(Segmentation_Head_a, self).__init__()
 
         self.n_classes = n_classes
         self.mask_res = mask_res
         self.bilinear = bilinear
         factor = 2 if bilinear else 1
-        self.up1 = Up(1280, 640 // factor, bilinear, use_batchnorm)#, norm_type)
-        self.up2 = Up(640, 320 // factor, bilinear, use_batchnorm)#, norm_type)
+        self.up1 = Up(1280, 640 // factor, bilinear, use_batchnorm)
+        self.up2 = Up(640, 320 // factor, bilinear, use_batchnorm)
         self.up3 = Up_conv(in_channels = 320,
                             out_channels = 160,
                             kernel_size=2) # 64 -> 128 , channel 320 -> 160
