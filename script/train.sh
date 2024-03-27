@@ -12,7 +12,7 @@ obj_name="leader_polyp"
 benchmark="bkai-igh-neopolyp"
 layer_name='layer_3'
 sub_folder="up_16_32_64"
-file_name="2_pe_basic_segmentation_model_a_cross_focal_batch_norm_head"
+file_name="10_pe_basic_segmentation_model_a_cross_focal_use_batchnorm"
 #
 accelerate launch --config_file ../../../gpu_config/gpu_0_1_config \
  --main_process_port $port_number ../train.py --log_with wandb \
@@ -31,5 +31,4 @@ accelerate launch --config_file ../../../gpu_config/gpu_0_1_config \
  --use_position_embedder \
  --aggregation_model_a \
  --n_classes 3 \
- --mask_res 256 \
- --norm_type "batch_norm"
+ --mask_res 256 --use_batchnorm
