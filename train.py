@@ -7,6 +7,8 @@ import os
 from attention_store import AttentionStore
 from data import call_dataset
 from model import call_model_package
+from model.segmentation_unet import Segmentation_Head_a, Segmentation_Head_b, Segmentation_Head_c
+
 from model.diffusion_model import transform_models_if_DDP
 from model.unet import unet_passing_argument
 from utils import prepare_dtype, arg_as_list, reshape_batch_dim_to_heads
@@ -16,13 +18,6 @@ from utils.optimizer import get_optimizer, get_scheduler_fix
 from utils.saving import save_model
 from utils.loss import FocalLoss, Multiclass_FocalLoss
 from utils.evaluate import evaluation_check
-from model.segmentation_unet import Segmentation_Head_a as sha
-from model.segmentation_unet import Segmentation_Head_b as shb
-from model.segmentation_unet import Segmentation_Head_c as shc
-from model.segment_unet_org import Segmentation_Head_a as sha_org
-from model.segment_unet_org import Segmentation_Head_b as shb_org
-from model.segment_unet_org import Segmentation_Head_c as shc_org
-
 
 def main(args):
 
@@ -50,23 +45,28 @@ def main(args):
     weight_dtype, save_dtype = prepare_dtype(args)
     text_encoder, vae, unet, network, position_embedder = call_model_package(args, weight_dtype, accelerator)
 
-    if args.use_new_code :
-        if args.aggregation_model_a:
-            segmentation_head = sha(n_classes=args.n_classes,
-                                                    mask_res=args.mask_res,
-                                                    norm_type=args.norm_type,)
+    if args.use_original_seg_unet :
+        segmentation_head_class = Segmentation_Head_a
         if args.aggregation_model_b :
-            segmentation_head = shb(n_classes=args.n_classes,
-                                                          mask_res=args.mask_res,
-                                                          norm_type=args.norm_type,)
+            segmentation_head_class = Segmentation_Head_b
         if args.aggregation_model_c :
-            segmentation_head = shc(n_classes=args.n_classes,
-                                                        mask_res=args.mask_res,
-                                                        norm_type=args.norm_type,)
-    else :
-        if args.aggregation_model_a:
-            segmentation_head = sha_org(n_classes=args.n_classes,
-                                        mask_res=args.mask_res,)
+            segmentation_head_class = Segmentation_Head_c
+        segmentation_head = segmentation_head_class(n_classes=args.n_classes,
+                                                    mask_res=args.mask_res)
+    elif args.use_new_seg_unet :
+        from model.segmentation_unet_new import Segmentation_Head_a, Segmentation_Head_b, Segmentation_Head_c
+        segmentation_head_class = Segmentation_Head_a
+        if args.aggregation_model_b:
+            segmentation_head_class = Segmentation_Head_b
+        if args.aggregation_model_c:
+            segmentation_head_class = Segmentation_Head_c
+        segmentation_head = segmentation_head_class(n_classes=args.n_classes,
+                                                    mask_res=args.mask_res,
+                                                    norm_type=args.norm_type,
+                                                    non_linearity=args.non_linearity,)
+
+
+
 
     print(f'\n step 5. optimizer')
     args.max_train_steps = len(train_dataloader) * args.max_train_epochs
@@ -74,6 +74,7 @@ def main(args):
     if args.use_position_embedder:
         trainable_params.append({"params": position_embedder.parameters(), "lr": args.learning_rate})
     trainable_params.append({"params": segmentation_head.parameters(), "lr": args.learning_rate})
+
     optimizer_name, optimizer_args, optimizer = get_optimizer(args, trainable_params)
 
     print(f'\n step 6. lr')
@@ -143,7 +144,7 @@ def main(args):
                 latents = vae.encode(image).latent_dist.sample() * args.vae_scale_factor
             with torch.set_grad_enabled(True):
                 unet(latents, 0, encoder_hidden_states, trg_layer_list=args.trg_layer_list, noise_type=position_embedder)
-            query_dict, key_dict = controller.query_dict, controller.key_dict
+            query_dict, key_dict, attn_dict = controller.query_dict, controller.key_dict, controller.attn_dict
             controller.reset()
             q_dict = {}
             for layer in args.trg_layer_list:
@@ -185,7 +186,6 @@ def main(args):
                 progress_bar.set_postfix(**loss_dict)
             if global_step >= args.max_train_steps:
                 break
-
         # ----------------------------------------------------------------------------------------------------------- #
         accelerator.wait_for_everyone()
         if is_main_process:
@@ -198,12 +198,12 @@ def main(args):
             if args.use_position_embedder :
                 save_model(args,
                            saving_folder='position_embedder',
-                           saving_name = f'position_embedder-{saving_epoch}.pt',
+                           saving_name = f'position_embedder-{saving_epoch}.safetensors',
                            unwrapped_nw=accelerator.unwrap_model(position_embedder),
                            save_dtype=save_dtype)
             save_model(args,
                        saving_folder='segmentation',
-                       saving_name = f'segmentation-{saving_epoch}.pt',
+                       saving_name = f'segmentation-{saving_epoch}.safetensors',
                        unwrapped_nw=accelerator.unwrap_model(segmentation_head),
                        save_dtype=save_dtype)
         # ----------------------------------------------------------------------------------------------------------- #
@@ -319,14 +319,14 @@ if __name__ == "__main__":
     parser.add_argument("--use_focal_loss", action='store_true')
     parser.add_argument("--position_embedder_weights", type=str, default=None)
     parser.add_argument("--use_position_embedder", action='store_true')
-    parser.add_argument("--use_new_code", action='store_true')
     parser.add_argument("--check_training", action='store_true')
     parser.add_argument("--pretrained_segmentation_model", type=str)
     parser.add_argument("--do_attn_loss", action='store_true')
-    parser.add_argument("--aggregation_model_a", action='store_true')
     parser.add_argument("--aggregation_model_b", action='store_true')
     parser.add_argument("--aggregation_model_c", action='store_true')
-    parser.add_argument("--norm_type", type=str, default='batchnorm', choices=['batch_norm', 'instance_norm', 'layer_norm'])
+    parser.add_argument("--use_original_seg_unet", action='store_true')
+    parser.add_argument("--use_new_seg_unet", action='store_true')
+    parser.add_argument("--norm_type", type=str, default='batchnorm', choices=['batchnorm', 'instancenorm', 'layernorm'])
     parser.add_argument("--non_linearity", type=str, default='relu', choices=['relu', 'leakyrelu', 'gelu'])
     args = parser.parse_args()
     unet_passing_argument(args)
