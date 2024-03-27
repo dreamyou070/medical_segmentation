@@ -172,37 +172,59 @@ def main(args):
         # ----------------------------------------------------------------------------------------------------------- #
         accelerator.wait_for_everyone()
         if is_main_process:
-            saving_epoch = str(epoch+1).zfill(6)
+            saving_epoch = str(epoch + 1).zfill(6)
             save_model(args,
                        saving_folder='model',
-                       saving_name = f'lora-{saving_epoch}.safetensors',
+                       saving_name=f'lora-{saving_epoch}.safetensors',
                        unwrapped_nw=accelerator.unwrap_model(network),
                        save_dtype=save_dtype)
-            if position_embedder is not None:
+            if args.use_position_embedder:
                 save_model(args,
                            saving_folder='position_embedder',
-                           saving_name = f'position_embedder-{saving_epoch}.safetensors',
+                           saving_name=f'position_embedder-{saving_epoch}.pt',
                            unwrapped_nw=accelerator.unwrap_model(position_embedder),
                            save_dtype=save_dtype)
             save_model(args,
                        saving_folder='segmentation',
-                       saving_name = f'segmentation-{saving_epoch}.safetensors',
+                       saving_name=f'segmentation-{saving_epoch}.pt',
                        unwrapped_nw=accelerator.unwrap_model(segmentation_head),
                        save_dtype=save_dtype)
-
         # ----------------------------------------------------------------------------------------------------------- #
         # [7] evaluate
-        IOU_dict, pred, dice_coeff = evaluation_check(segmentation_head, test_dataloader, accelerator.device,
-                                                      text_encoder, unet, vae, controller, weight_dtype,
-                                                      position_embedder, args)
-        print(f'IOU_keras = {IOU_dict}')
+        loader = test_dataloader
+        if args.check_training:
+            print(f'test with training data')
+            loader = train_dataloader
+        score_dict, confusion_matrix, dice_coeff = evaluation_check(segmentation_head, loader,
+                                                                    accelerator.device,
+                                                                    text_encoder, unet, vae, controller,
+                                                                    weight_dtype,
+                                                                    position_embedder, args)
         # saving
-        score_save_dir = os.path.join(args.output_dir, 'score.txt')
-        with open(score_save_dir, 'a') as f:
-            for k in IOU_dict:
-                f.write(f'class {k} = {IOU_dict[k]} ')
-            f.write(f'| dice_coeff = {dice_coeff}')
-            f.write(f'\n')
+        if is_main_process:
+            print(f'  - precision dictionary = {score_dict}')
+            print(f'  - confusion_matrix = {confusion_matrix}')
+            confusion_matrix = confusion_matrix.tolist()
+            confusion_save_dir = os.path.join(args.output_dir, 'confusion.txt')
+            with open(confusion_save_dir, 'a') as f:
+                f.write(f' epoch = {epoch + 1} \n')
+                for i in range(len(confusion_matrix)):
+                    for j in range(len(confusion_matrix[i])):
+                        f.write(' ' + str(confusion_matrix[i][j]) + ' ')
+                    f.write('\n')
+                f.write('\n')
+
+            score_save_dir = os.path.join(args.output_dir, 'score.txt')
+            with open(score_save_dir, 'a') as f:
+                dices = []
+                f.write(f' epoch = {epoch + 1} | ')
+                for k in score_dict:
+                    dice = float(score_dict[k])
+                    f.write(f'class {k} = {dice} ')
+                    dices.append(dice)
+                dice_coeff = sum(dices) / len(dices)
+                f.write(f'| dice_coeff = {dice_coeff}')
+                f.write(f'\n')
     accelerator.end_training()
 
 
