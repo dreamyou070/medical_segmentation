@@ -7,7 +7,7 @@ import os
 from attention_store import AttentionStore
 from data import call_dataset
 from model import call_model_package
-from model.segmentation_unet import Segmentation_Head_a, Segmentation_Head_b, Segmentation_Head_c
+
 
 from model.diffusion_model import transform_models_if_DDP
 from model.unet import unet_passing_argument
@@ -46,6 +46,7 @@ def main(args):
     text_encoder, vae, unet, network, position_embedder = call_model_package(args, weight_dtype, accelerator)
 
     if args.use_original_seg_unet :
+        from model.segmentation_unet import Segmentation_Head_a, Segmentation_Head_b, Segmentation_Head_c
         segmentation_head_class = Segmentation_Head_a
         if args.aggregation_model_b :
             segmentation_head_class = Segmentation_Head_b

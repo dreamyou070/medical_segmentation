@@ -25,6 +25,5 @@ accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_3_4_5_config \
  --use_position_embedder \
  --n_classes 3 \
  --mask_res 256 \
- --use_new_seg_unet \
  --norm_type "batchnorm" \
- --nonlinearity_type "relu"
+ --nonlinearity "relu"
