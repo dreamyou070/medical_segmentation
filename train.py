@@ -19,9 +19,9 @@ from utils.evaluate import evaluation_check
 from model.segmentation_unet import Segmentation_Head_a as sha
 from model.segmentation_unet import Segmentation_Head_b as shb
 from model.segmentation_unet import Segmentation_Head_c as shc
-from model.segmentation_unet_org import Segmentation_Head_a as sha_org
-from model.segmentation_unet_org import Segmentation_Head_b as shb_org
-from model.segmentation_unet_org import Segmentation_Head_c as shc_org
+from model.segment_unet_org import Segmentation_Head_a as sha_org
+from model.segment_unet_org import Segmentation_Head_b as shb_org
+from model.segment_unet_org import Segmentation_Head_c as shc_org
 
 
 def main(args):
