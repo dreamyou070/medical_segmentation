@@ -209,7 +209,7 @@ def main(args):
         if args.check_training :
             print(f'test with training data')
             loader = train_dataloader
-        score_dict, confusion_matrix, dice_coeff = evaluation_check(segmentation_head, loader, accelerator.device,
+        score_dict, confusion_matrix, _ = evaluation_check(segmentation_head, loader, accelerator.device,
                                                       text_encoder, unet, vae, controller, weight_dtype,
                                                       position_embedder, args)
         # saving

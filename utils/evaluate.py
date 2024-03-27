@@ -2,12 +2,21 @@ import torch
 import torch.nn.functional as F
 from tqdm import tqdm
 from utils import reshape_batch_dim_to_heads
-from utils.loss import multiclass_dice_coeff, dice_loss
+from utils.loss import dice_loss
 import torch
 import numpy as np
 from sklearn.metrics import confusion_matrix
+# pip install pytorch-ignite
+from ignite.metrics import Accuracy
+from ignite.metrics.confusion_matrix import ConfusionMatrix
+import torch
+from ignite.engine import *
+from ignite.handlers import *
+from ignite.metrics import *
+import torch.nn.functional as F
 
-
+def eval_step(engine, batch):
+    return batch
 @torch.inference_mode()
 def evaluation_check(segmentation_head, dataloader, device, text_encoder, unet, vae, controller, weight_dtype,
                      position_embedder, args):
@@ -37,24 +46,29 @@ def evaluation_check(segmentation_head, dataloader, device, text_encoder, unet, 
             masks_pred = segmentation_head(x16_out, x32_out, x64_out) # 1,4,128,128
             #######################################################################################################################
             # [1] pred
+            class_num = masks_pred.shape[1]
             mask_pred_ = masks_pred.permute(0, 2, 3, 1).detach().cpu().numpy()  # 1,128,128,4
             mask_pred_argmax = np.argmax(mask_pred_, axis=3).flatten()          # 128*128
             y_pred_list.append(torch.Tensor(mask_pred_argmax))
 
             mask_true = gt_flat.detach().cpu().numpy().flatten()                # 128*128
             y_true_list.append(torch.Tensor(mask_true))
-            # [2] dice coefficient
-            dice_coeff = 1-dice_loss(F.softmax(masks_pred, dim=1).float(),  # class 0 ~ 4 check best
-                                     gt,
-                                     multiclass=True)
-            dice_coeff_list.append(dice_coeff.detach().cpu())
-        y_hat = torch.cat(y_pred_list)
-        y = torch.cat(y_true_list)
-        c_matrix = confusion_matrix(y, y_hat)
-        actual_axis, pred_axis = c_matrix.shape
-        score_dict = {}
+        y_pred = torch.cat(y_pred_list)
+        y_pred = F.one_hot(y_pred, num_classes=class_num)  # [pixel_num, C]
+        y_true = torch.cat(y_true_list).long()  # [pixel_num]
+        # [2] make confusion engine
+        default_evaluator = Engine(eval_step)
+        cm = ConfusionMatrix(num_classes=class_num)
+        cm.attach(default_evaluator, 'confusion_matrix')
+        state = default_evaluator.run([[y_pred, y_true]])
+        confusion_matrix = state.metrics['confusion_matrix']
+        actual_axis, pred_axis = confusion_matrix.shape
+        IOU_dict = {}
+        eps = 1e-15
         for actual_idx in range(actual_axis):
-            score_dict[actual_idx] = c_matrix[actual_idx, actual_idx] / sum(c_matrix[actual_idx])
-        dice_coeff = np.mean(np.array(dice_coeff_list))
+            total_actual_num = sum(confusion_matrix[actual_idx])
+            total_predict_num = sum(confusion_matrix[:, actual_idx])
+            dice_coeff = 2 * confusion_matrix[actual_idx, actual_idx] / (total_actual_num + total_predict_num + eps)
+            IOU_dict[actual_idx] = round(dice_coeff.item(), 3)
     segmentation_head.train()
-    return score_dict, c_matrix, dice_coeff
+    return IOU_dict, confusion_matrix, dice_coeff
