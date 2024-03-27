@@ -25,5 +25,6 @@ accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_3_4_5_config \
  --use_position_embedder \
  --n_classes 3 \
  --mask_res 256 \
+ --aggregation_model_a \
  --norm_type "batch_norm" \
  --non_linearity "relu"
