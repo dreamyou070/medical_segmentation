@@ -324,7 +324,7 @@ if __name__ == "__main__":
     parser.add_argument("--aggregation_model_a", action='store_true')
     parser.add_argument("--aggregation_model_b", action='store_true')
     parser.add_argument("--aggregation_model_c", action='store_true')
-    parser.add_argument("--norm_type", type=str, default='batchnorm', choices=['batchnorm', 'instancenorm', 'layernorm'])
+    parser.add_argument("--norm_type", type=str, default='batchnorm', choices=['batch_norm', 'instance_norm', 'layer_norm'])
     parser.add_argument("--non_linearity", type=str, default='relu', choices=['relu', 'leakyrelu', 'gelu'])
 
     args = parser.parse_args()
