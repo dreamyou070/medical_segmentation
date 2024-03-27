@@ -7,7 +7,7 @@ import os
 from attention_store import AttentionStore
 from data import call_dataset
 from model import call_model_package
-from model.segmentation_unet import Segmentation_Head
+from model.segmentation_unet import Segmentation_Head_a,Segmentation_Head_b,Segmentation_Head_c
 from model.diffusion_model import transform_models_if_DDP
 from model.unet import unet_passing_argument
 from utils import prepare_dtype, arg_as_list, reshape_batch_dim_to_heads
@@ -43,8 +43,16 @@ def main(args):
     print(f'\n step 4. model')
     weight_dtype, save_dtype = prepare_dtype(args)
     text_encoder, vae, unet, network, position_embedder = call_model_package(args, weight_dtype, accelerator)
-    segmentation_head = Segmentation_Head(n_classes=args.n_classes,
-                                          kernel_size = args.kernel_size,)
+    if args.aggregation_model_a:
+        segmentation_head_class = Segmentation_Head_a
+    if args.aggregation_model_b:
+        segmentation_head_class = Segmentation_Head_b
+    if args.aggregation_model_c:
+        segmentation_head_class = Segmentation_Head_c
+    segmentation_head = segmentation_head_class(n_classes=args.n_classes,
+                                                mask_res=args.mask_res,
+                                                norm_type=args.norm_type,
+                                                non_linearity=args.non_linearity,)
 
 
     print(f'\n step 5. optimizer')
@@ -206,7 +214,8 @@ if __name__ == "__main__":
     parser.add_argument('--output_dir', type=str, default='output')
     # step 2. dataset
     parser.add_argument("--resize_shape", type=int, default=512)
-    parser.add_argument('--data_path', type=str, default=r'../../../MyData/anomaly_detection/MVTec3D-AD')
+    parser.add_argument('--train_data_path', type=str, default=r'../../../MyData/anomaly_detection/MVTec3D-AD')
+    parser.add_argument('--test_data_path', type=str, default=r'../../../MyData/anomaly_detection/MVTec3D-AD')
     parser.add_argument('--obj_name', type=str, default='bottle')
     parser.add_argument('--batch_size', type=int, default=1)
     parser.add_argument('--trigger_word', type=str)
@@ -275,6 +284,12 @@ if __name__ == "__main__":
     parser.add_argument("--multiclassification_focal_loss", action='store_true')
     parser.add_argument("--use_position_embedder", action='store_true')
     parser.add_argument("--pretrained_segmentation_model", type=str)
+    parser.add_argument("--aggregation_model_a", action='store_true')
+    parser.add_argument("--aggregation_model_b", action='store_true')
+    parser.add_argument("--aggregation_model_c", action='store_true')
+    parser.add_argument("--norm_type", type=str, default='batch_norm',
+                        choices=['batch_norm', 'instance_norm', 'layer_norm'])
+    parser.add_argument("--non_linearity", type=str, default='relu', choices=['relu', 'leakyrelu', 'gelu'])
     args = parser.parse_args()
     unet_passing_argument(args)
     passing_argument(args)
