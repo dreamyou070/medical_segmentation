@@ -122,7 +122,7 @@ class AllPositionalEmbedding(nn.Module):
         for layer_name in self.layer_dict.keys() :
             res, dim = self.layer_dict[layer_name]
 
-            if self.pe_do_concat :
+            if self.do_concat :
                 self.positional_encodings[layer_name] = SinglePositionalEmbedding_concat(max_len = res*res, d_model = dim)
 
             elif self.do_semantic_position :
