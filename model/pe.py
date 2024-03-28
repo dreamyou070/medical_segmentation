@@ -65,11 +65,14 @@ class SinglePositionalRelativeEmbedding(nn.Module):
 
     def forward(self, x: torch.Tensor):
 
+        # [1] relative position
         start_dim = 3
         # b,l,c -> b,d,l,c
         b, l, c = x.shape
         h = w = int(l ** 0.5)
-        x = einops.rearrange(x, 'b (h w) c -> b c h w', h=h, w=w)
+        x = einops.rearrange(x, 'b (h w) c -> b h w c', h=h, w=w)
+
+        # [2] relative position
         absolute_pe = self.positional_encodings.expand(b, -1, -1).to(x.device)
         absolute_pe = einops.rearrange(absolute_pe, 'b (h w) c -> b h w c', h=h, w=w)
         # absolute to relative
@@ -87,6 +90,8 @@ class SinglePositionalRelativeEmbedding(nn.Module):
 
                 relative_pe[:, i, j, :] = torch.stack(re_pe).sum(dim=0)
         x = x + relative_pe
+        # [3] reshpae to origin
+        x = einops.rearrange(x, 'b h w c -> b (h w) c')
         return x
 class AllPositionalEmbedding(nn.Module):
 
