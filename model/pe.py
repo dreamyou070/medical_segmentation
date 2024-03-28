@@ -61,7 +61,7 @@ class SinglePositionalRelativeEmbedding(nn.Module):
                  neighbor_size : int = 3):
         super().__init__()
         self.positional_encodings = nn.Parameter(torch.randn(1,max_len, d_model), requires_grad=True)
-        neighbor_size = neighbor_size
+        self.neighbor_size = neighbor_size
 
     def forward(self, x: torch.Tensor):
 
