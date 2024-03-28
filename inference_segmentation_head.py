@@ -14,8 +14,6 @@ import numpy as np
 from model.diffusion_model import load_target_model
 from model.pe import AllPositionalEmbedding
 from safetensors.torch import load_file
-from attention_store.normal_activator import NormalActivator
-from attention_store.normal_activator import passing_normalize_argument
 from torch import nn
 from torch.nn import functional as F
 from model.segmentation_unet import Segmentation_Head
