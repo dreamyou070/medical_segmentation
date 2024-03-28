@@ -28,8 +28,7 @@ class SinglePositional_Semantic_Embedding(nn.Module):
 
     def __init__(self,
                  max_len: int = 64 * 64,
-                 d_model: int = 320,
-                 se_alpha: float = 0.2):
+                 d_model: int = 320,):
         super().__init__()
         # [1] positional embeddings
         self.positional_encodings = nn.Parameter(torch.randn(1,max_len, d_model), requires_grad=True)
