@@ -29,10 +29,10 @@ for folder in folders:
             name = file.split('.')[0]
             org_img_path = os.path.join(train_img_folder, file)
             org_mask_path = os.path.join(train_mask_folder, f'{name}.npy')
-            org_mask_pil_path = os.path.join(train_mask_pil_folder, f'{name}.png')
+            org_mask_pil_path = os.path.join(train_mask_pil_folder, file)
             test_img_path = os.path.join(test_img_folder, file)
             test_mask_path = os.path.join(test_mask_folder, f'{name}.npy')
-            test_mask_pil_path = os.path.join(test_mask_pil_folder, f'{name}.png')
+            test_mask_pil_path = os.path.join(test_mask_pil_folder, file)
             os.rename(org_img_path, test_img_path)
             os.rename(org_mask_path, test_mask_path)
             os.rename(org_mask_pil_path, test_mask_pil_path)
