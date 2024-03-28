@@ -2,11 +2,11 @@
 
 port_number=50042
 category="medical"
-obj_name="brain"
-benchmark="BraTS2020_Segmentation_128"
+obj_name="leader_polyp"
+benchmark="bkai-igh-neopolyp"
 layer_name='layer_3'
 sub_folder="up_16_32_64"
-file_name="22_segmentation_model_128_layer_norm"
+file_name="2_pe_basic_segmentation_model_a_cross_focal_batch_norm_head_test"
 
 accelerate launch --config_file ../../../gpu_config/gpu_0_config \
  --main_process_port $port_number ../inference_segmentation_head.py \
@@ -20,4 +20,4 @@ accelerate launch --config_file ../../../gpu_config/gpu_0_config \
  --trg_layer_list "['up_blocks_1_attentions_2_transformer_blocks_0_attn2',
                     'up_blocks_2_attentions_2_transformer_blocks_0_attn2',
                     'up_blocks_3_attentions_2_transformer_blocks_0_attn2',]" \
- --threds [0.5] --use_position_embedder
+ --use_position_embedder
