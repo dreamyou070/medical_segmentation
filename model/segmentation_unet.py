@@ -118,6 +118,13 @@ class Segmentation_Head_a(nn.Module):
             self.up4 = Up_conv(in_channels = 160,
                                 out_channels = 160,
                                 kernel_size=2)  # 128 -> 256
+        if self.mask_res == 512 :
+            self.up4 = Up_conv(in_channels=160,
+                               out_channels=160,
+                               kernel_size=2)  # 128 -> 256
+            self.up5 = Up_conv(in_channels = 160,
+                                out_channels = 160,
+                                kernel_size=2)
         self.outc = OutConv(160, n_classes)
     def forward(self, x16_out, x32_out, x64_out):
 
@@ -128,6 +135,10 @@ class Segmentation_Head_a(nn.Module):
         if self.mask_res == 256 :
             x4_out = self.up4(x3_out)
             x_in = x4_out
+        if self.mask_res == 512 :
+            x4_out = self.up4(x3_out)
+            x5_out = self.up5(x4_out)
+            x_in = x5_out
         logits = self.outc(x_in)  # 1,4, 128,128
         return logits
 
