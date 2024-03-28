@@ -17,7 +17,7 @@ from utils.optimizer import get_optimizer, get_scheduler_fix
 from utils.saving import save_model
 from utils.loss import FocalLoss, Multiclass_FocalLoss
 from utils.evaluate import evaluation_check
-from model.pe import AllPositionalEmbedding, AllPositionalRelativeEmbedding
+from model.pe import AllPositionalEmbedding, AllPositionRelativeEmbedding
 from safetensors.torch import load_file
 def main(args):
 
@@ -53,7 +53,7 @@ def main(args):
             position_embedder.load_state_dict(position_embedder_state_dict)
             position_embedder.to(dtype=weight_dtype)
     elif args.relative_position_embedder:
-        position_embedder = AllPositionalRelativeEmbedding(pe_do_concat = args.pe_do_concat,
+        position_embedder = AllPositionRelativeEmbedding(pe_do_concat = args.pe_do_concat,
                                                            neighbor_size=args.neighbor_size)
 
     if args.aggregation_model_a:
