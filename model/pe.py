@@ -52,7 +52,7 @@ class SinglePositional_Semantic_Embedding(nn.Module):
         attention_probs = attention_scores.softmax(dim=-1).to(x.dtype)
         se = torch.bmm(attention_probs, x)
         # [3] add positional and semantic embeddings
-        x = x + pe + self.se_alpha * se
+        x = x + pe + self.se_alpha.to(x.device) * se
         # [4] reshape
         if start_dim == 4:
             x = einops.rearrange(x, 'b (h w) c -> b c h w', h=res, w=res)
