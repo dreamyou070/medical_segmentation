@@ -285,7 +285,7 @@ if __name__ == '__main__':
     parser.add_argument("--aggregation_model_b", action='store_true')
     parser.add_argument("--aggregation_model_c", action='store_true')
     parser.add_argument("--mask_res", type=int, default=128)
-
+    parser.add_argument("--pe_do_concat", action='store_true')
 
     args = parser.parse_args()
     passing_argument(args)
