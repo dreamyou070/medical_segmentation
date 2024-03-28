@@ -88,7 +88,7 @@ def main(args):
         if args.use_position_embedder:
             parent = os.path.split(args.network_folder)[0]
             pe_base_dir = os.path.join(parent, f'position_embedder')
-            pretrained_pe_dir = os.path.join(pe_base_dir, f'position_embedder_{lora_epoch}.safetensors')
+            pretrained_pe_dir = os.path.join(pe_base_dir, f'position_embedder-{lora_epoch}.safetensors')
             position_embedder_state_dict = load_file(pretrained_pe_dir)
             position_embedder.load_state_dict(position_embedder_state_dict)
             position_embedder.to(accelerator.device, dtype=weight_dtype)
@@ -102,7 +102,7 @@ def main(args):
 
         # [3] segmentation model
         seg_base_dir = os.path.join(parent, f'segmentation')
-        pretrained_seg_dir = os.path.join(seg_base_dir, f'segmentation_{lora_epoch}.safetensors')
+        pretrained_seg_dir = os.path.join(seg_base_dir, f'segmentation-{lora_epoch}.safetensors')
         segmentation_head.load_state_dict(load_file(pretrained_seg_dir))
         segmentation_head.to(accelerator.device, dtype=weight_dtype)
 
