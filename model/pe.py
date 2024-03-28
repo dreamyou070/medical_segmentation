@@ -70,7 +70,7 @@ class SinglePositionalRelativeEmbedding(nn.Module):
         b, l, c = x.shape
         h = w = int(l ** 0.5)
         x = einops.rearrange(x, 'b (h w) c -> b c h w', h=h, w=w)
-        absolute_pe = self.positional_encodings.to(x.device)(x)
+        absolute_pe = self.positional_encodings.expand(b, -1, -1).to(x.device)
         absolute_pe = einops.rearrange(absolute_pe, 'b (h w) c -> b h w c', h=h, w=w)
         # absolute to relative
         relative_pe = torch.zeros_like(absolute_pe)
