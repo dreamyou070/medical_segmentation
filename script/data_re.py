@@ -28,26 +28,22 @@ for folder in folders:
         mask_file_path = os.path.join(train_mask_folder, mask_file)
         mask_arr = np.load(mask_file_path)
         h,w = mask_arr.shape
-        print(mask_arr.shape)
-        """
         if h != 256 or w != 256:
             new_mask_arr = np.zeros((256, 256), dtype=np.uint8)
             pad_h = (256 - h) // 2
             pad_w = (256 - w) // 2
             new_mask_arr[pad_h:pad_h+h, pad_w:pad_w+w] = mask_arr
         np.save(os.path.join(train_mask_folder, mask_file), new_mask_arr)
-        """
+
 
     for test_mask_file in test_mask_files :
         test_mask_file_path = os.path.join(test_mask_folder, test_mask_file)
         test_mask_arr = np.load(test_mask_file_path)
         h,w = test_mask_arr.shape
-        print(test_mask_arr.shape)
-        """
         if h != 256 or w != 256:
             new_test_mask_arr = np.zeros((256, 256), dtype=np.uint8)
             pad_h = (256 - h) // 2
             pad_w = (256 - w) // 2
             new_test_mask_arr[pad_h:pad_h+h, pad_w:pad_w+w] = test_mask_arr
         np.save(os.path.join(test_mask_folder, test_mask_file), new_test_mask_arr)
-        """
+        
