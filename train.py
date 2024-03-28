@@ -324,7 +324,8 @@ if __name__ == "__main__":
     parser.add_argument("--aggregation_model_c", action='store_true')
     parser.add_argument("--norm_type", type=str, default='batchnorm', choices=['batch_norm', 'instance_norm', 'layer_norm'])
     parser.add_argument("--non_linearity", type=str, default='relu', choices=['relu', 'leakyrelu', 'gelu'])
-
+    parser.add_argument("--absolute_position_embedder", action='store_true')
+    parser.add_argument("--relative_position_embedder", action='store_true')
     args = parser.parse_args()
     unet_passing_argument(args)
     passing_argument(args)
