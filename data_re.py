@@ -1,6 +1,6 @@
 import os
 
-base_dir = r'/home/dreamyou070/MyData/anomaly_detection/medical/brain/BraTS2020_Segmentation_256/train'
+base_dir = r'/home/dreamyou070/MyData/anomaly_detection/medical/brain/BraTS2020_Segmentation_256'
 
 train_dir = os.path.join(base_dir, 'train')
 test_dir = os.path.join(base_dir, 'test')
