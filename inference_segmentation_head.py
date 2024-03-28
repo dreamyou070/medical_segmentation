@@ -89,7 +89,7 @@ def main(args):
             parent = os.path.split(args.network_folder)[0]
             pe_base_dir = os.path.join(parent, f'position_embedder')
             pretrained_pe_dir = os.path.join(pe_base_dir, f'position_embedder-{lora_epoch}.pt')
-            position_embedder_state_dict = load_file(pretrained_pe_dir)
+            position_embedder_state_dict = torch.load(pretrained_pe_dir)
             position_embedder.load_state_dict(position_embedder_state_dict)
             position_embedder.to(accelerator.device, dtype=weight_dtype)
 
