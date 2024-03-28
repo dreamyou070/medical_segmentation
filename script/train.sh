@@ -33,10 +33,8 @@ accelerate launch --config_file ../../../gpu_config/gpu_0_config \
                     'up_blocks_2_attentions_2_transformer_blocks_0_attn2',
                     'up_blocks_3_attentions_2_transformer_blocks_0_attn2',]" \
  --use_position_embedder \
- --relative_position_embedder \
+ --do_semantic_position \
  --aggregation_model_a \
  --n_classes 3 \
  --mask_res 256 \
- --use_batchnorm \
- --saving_query_before_attn \
- --do_semantic_position
+ --use_batchnorm

@@ -45,14 +45,12 @@ def main(args):
     weight_dtype, save_dtype = prepare_dtype(args)
     text_encoder, vae, unet, network = call_model_package(args, weight_dtype, accelerator)
     # [2] pe
-
-    if args.absolute_position_embedder:
-        position_embedder = AllPositionalEmbedding(pe_do_concat = args.pe_do_concat,
-                                                   do_semantic_position = args.do_semantic_position)
-        if args.position_embedder_weights is not None:
-            position_embedder_state_dict = load_file(args.position_embedder_weights)
-            position_embedder.load_state_dict(position_embedder_state_dict)
-            position_embedder.to(dtype=weight_dtype)
+    position_embedder = AllPositionalEmbedding(pe_do_concat = args.pe_do_concat,
+                                               do_semantic_position = args.do_semantic_position)
+    if args.position_embedder_weights is not None:
+        position_embedder_state_dict = load_file(args.position_embedder_weights)
+        position_embedder.load_state_dict(position_embedder_state_dict)
+        position_embedder.to(dtype=weight_dtype)
 
     if args.aggregation_model_a:
         segmentation_head_class = Segmentation_Head_a
@@ -326,9 +324,6 @@ if __name__ == "__main__":
     parser.add_argument("--aggregation_model_c", action='store_true')
     parser.add_argument("--norm_type", type=str, default='batchnorm', choices=['batch_norm', 'instance_norm', 'layer_norm'])
     parser.add_argument("--non_linearity", type=str, default='relu', choices=['relu', 'leakyrelu', 'gelu'])
-    parser.add_argument("--absolute_position_embedder", action='store_true')
-    parser.add_argument("--saving_query_before_attn", action='store_true')
-    parser.add_argument("--saving_query_after_attn", action='store_true')
     parser.add_argument("--neighbor_size", type=int, default=3)
     parser.add_argument("--do_semantic_position", action='store_true')
     args = parser.parse_args()
