@@ -16,8 +16,9 @@ from model.pe import AllPositionalEmbedding
 from safetensors.torch import load_file
 from torch import nn
 from torch.nn import functional as F
-from model.segmentation_unet import Segmentation_Head
+from model.segmentation_unet import Segmentation_Head_a, Segmentation_Head_b, Segmentation_Head_c
 from sklearn.metrics import confusion_matrix
+from model.pe import AllPositionalEmbedding
 
 
 def reshape_batch_dim_to_heads(tensor):
@@ -45,12 +46,19 @@ def main(args):
     tokenizer = load_tokenizer(args)
     text_encoder, vae, unet, _ = load_target_model(args, weight_dtype, accelerator)
     print(f' (2.2) position embedder')
-    position_embedder = None
-    if args.use_position_embedder: position_embedder = AllPositionalEmbedding()
+    if args.use_position_embedder:
+        position_embedder = AllPositionalEmbedding(pe_do_concat=args.pe_do_concat)
     print(f' (2.3) segmentation head')
-    segmentation_head = Segmentation_Head(n_classes=args.n_classes,
-                                          use_batchnorm=args.use_batchnorm)
-
+    if args.aggregation_model_a:
+        segmentation_head_class = Segmentation_Head_a
+    if args.aggregation_model_b:
+        segmentation_head_class = Segmentation_Head_b
+    if args.aggregation_model_c:
+        segmentation_head_class = Segmentation_Head_c
+    segmentation_head = segmentation_head_class(n_classes=args.n_classes,
+                                                mask_res=args.mask_res,
+                                                use_batchnorm=args.use_batchnorm,
+                                                use_instance_norm=args.use_instance_norm, )
     print(f'\n step 2. accelerator and device')
     vae.requires_grad_(False)
     vae.to(accelerator.device, dtype=weight_dtype)
@@ -270,8 +278,17 @@ if __name__ == '__main__':
     parser.add_argument("--test_with_xray", action='store_true')
     parser.add_argument("--n_classes", type=int, default=4)
     parser.add_argument("--use_batchnorm", action='store_true')
+    parser.add_argument("--use_position_embedder", action='store_true')
+    parser.add_argument("--check_training", action='store_true')
+    parser.add_argument("--pretrained_segmentation_model", type=str)
+    parser.add_argument("--use_instance_norm", action='store_true')
+    parser.add_argument("--aggregation_model_a", action='store_true')
+    parser.add_argument("--aggregation_model_b", action='store_true')
+    parser.add_argument("--aggregation_model_c", action='store_true')
+    parser.add_argument("--mask_res", type=int, default=128)
+
+
     args = parser.parse_args()
     passing_argument(args)
     unet_passing_argument(args)
-    passing_normalize_argument(args)
     main(args)
