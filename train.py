@@ -17,7 +17,7 @@ from utils.optimizer import get_optimizer, get_scheduler_fix
 from utils.saving import save_model
 from utils.loss import FocalLoss, Multiclass_FocalLoss
 from utils.evaluate import evaluation_check
-
+from model.pe import AllPositionalEmbedding, AllPositionalRelativeEmbedding
 from safetensors.torch import load_file
 def main(args):
 
@@ -45,7 +45,7 @@ def main(args):
     weight_dtype, save_dtype = prepare_dtype(args)
     text_encoder, vae, unet, network = call_model_package(args, weight_dtype, accelerator)
     # [2] pe
-    from model.pe import AllPositionalEmbedding
+
     if args.absolute_position_embedder:
         position_embedder = AllPositionalEmbedding(pe_do_concat = args.pe_do_concat)
         if args.position_embedder_weights is not None:
@@ -53,7 +53,8 @@ def main(args):
             position_embedder.load_state_dict(position_embedder_state_dict)
             position_embedder.to(dtype=weight_dtype)
     elif args.relative_position_embedder:
-        position_embedder = AllPositionalEmbedding(pe_do_concat = args.pe_do_concat)
+        position_embedder = AllPositionalRelativeEmbedding(pe_do_concat = args.pe_do_concat,
+                                                           neighbor_size=args.neighbor_size)
 
     if args.aggregation_model_a:
         segmentation_head_class = Segmentation_Head_a
@@ -331,6 +332,7 @@ if __name__ == "__main__":
     parser.add_argument("--relative_position_embedder", action='store_true')
     parser.add_argument("--saving_query_before_attn", action='store_true')
     parser.add_argument("--saving_query_after_attn", action='store_true')
+    parser.add_argument("--neighbor_size", type=int, default=3)
     args = parser.parse_args()
     unet_passing_argument(args)
     passing_argument(args)

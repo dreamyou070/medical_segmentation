@@ -57,9 +57,11 @@ class SinglePositionalRelativeEmbedding(nn.Module):
 
     def __init__(self,
                  max_len: int = 64 * 64,
-                 d_model: int = 320, ):
+                 d_model: int = 320,
+                 neighbor_size : int = 3):
         super().__init__()
         self.positional_encodings = nn.Parameter(torch.randn(1,max_len, d_model), requires_grad=True)
+        neighbor_size = neighbor_size
 
     def forward(self, x: torch.Tensor):
 
@@ -78,8 +80,8 @@ class SinglePositionalRelativeEmbedding(nn.Module):
                 # absolute_position = x[:,i,j,:]
                 # get range
                 re_pe = []
-                for ii in range(i - 3, i + 3):
-                    for jj in range(w - 3, j + 3):
+                for ii in range(i - self.neighbor_size, i + self.neighbor_size):
+                    for jj in range(w -self.neighbor_size, j + self.neighbor_size):
                         if ii >= 0 and ii < h and jj >= 0 and jj < w:
                             new_value = absolute_pe[:, i, j, :] - absolute_pe[:, ii, jj, :]
                             re_pe.append(new_value)
@@ -157,7 +159,7 @@ class AllPositionRelativeEmbedding(nn.Module):
                            'up_blocks_3_attentions_1_transformer_blocks_0_attn2': (64, 320),
                            'up_blocks_3_attentions_2_transformer_blocks_0_attn2': (64, 320), }
 
-    def __init__(self, pe_do_concat) -> None:
+    def __init__(self, pe_do_concat, neighbor_size) -> None:
         super().__init__()
 
         self.layer_dict = self.layer_names_res_dim
@@ -168,7 +170,9 @@ class AllPositionRelativeEmbedding(nn.Module):
             #if pe_do_concat :
             #    self.positional_encodings[layer_name] = SinglePositionalRelativeEmbedding_concat(max_len = res*res, d_model = dim)
             #else :
-            self.positional_encodings[layer_name] = SinglePositionalRelativeEmbedding(max_len = res*res, d_model = dim)
+            self.positional_encodings[layer_name] = SinglePositionalRelativeEmbedding(max_len = res*res,
+                                                                                      d_model = dim,
+                                                                                      neighbor_size = 3)
 
     def forward(self, x: torch.Tensor, layer_name):
         if layer_name in self.positional_encodings.keys() :
