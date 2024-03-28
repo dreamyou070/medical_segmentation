@@ -81,10 +81,10 @@ class SinglePositionalRelativeEmbedding(nn.Module):
                 # get range
                 re_pe = []
                 for ii in range(i - self.neighbor_size, i + self.neighbor_size):
-                    for jj in range(w -self.neighbor_size, j + self.neighbor_size):
+                    for jj in range(j -self.neighbor_size, j + self.neighbor_size):
                         if ii >= 0 and ii < h and jj >= 0 and jj < w:
-                            new_value = absolute_pe[:, i, j, :] - absolute_pe[:, ii, jj, :]
-                            re_pe.append(new_value)
+                            re_pe.append(absolute_pe[:, i, j, :] - absolute_pe[:, ii, jj, :])
+
                 relative_pe[:, i, j, :] = torch.stack(re_pe).sum(dim=0)
         x = x + relative_pe
         return x
