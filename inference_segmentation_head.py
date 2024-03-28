@@ -83,7 +83,7 @@ def main(args):
         network_model_dir = os.path.join(args.network_folder, model)
         lora_name, ext = os.path.splitext(model)
         lora_epoch = int(lora_name.split('-')[-1])
-
+        lora_epoch = str(lora_epoch).zfill(6)
         # [1] loead pe
         if args.use_position_embedder:
             parent = os.path.split(args.network_folder)[0]
