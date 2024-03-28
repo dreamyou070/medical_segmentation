@@ -20,8 +20,8 @@ accelerate launch --config_file ../../../gpu_config/gpu_0_config \
  --trg_layer_list "['up_blocks_1_attentions_2_transformer_blocks_0_attn2',
                     'up_blocks_2_attentions_2_transformer_blocks_0_attn2',
                     'up_blocks_3_attentions_2_transformer_blocks_0_attn2',]" \
- --use_position_embedder
- --aggregate_model_a
- --n_classes 3
- --mask_res 256
+ --use_position_embedder \
+ --aggregate_model_a \
+ --n_classes 3 \
+ --mask_res 256 \
  --use_batchnorm
