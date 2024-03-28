@@ -12,11 +12,11 @@
 # 8_absolute_pe_do_semantic_position_segmentation_model_a_cross_focal_use_batch_norm_query_after_attn --use_batchnorm
 
 
-port_number=50556
+port_number=50558
 category="medical"
-obj_name="abdomen"
-trigger_word="abdomen"
-benchmark="abdomen"
+obj_name="cardiac"
+trigger_word="cardiac"
+benchmark="acdc"
 layer_name='layer_3'
 sub_folder="up_16_32_64"
 file_name="1_absolute_pe_do_semantic_position_segmentation_model_a_cross_focal_use_batch_norm_query_gpu6"
@@ -38,6 +38,6 @@ accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_3_4_5_config \
  --use_position_embedder \
  --do_semantic_position \
  --aggregation_model_a \
- --n_classes 14 \
+ --n_classes 4 \
  --mask_res 256 \
  --use_batchnorm
