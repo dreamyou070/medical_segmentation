@@ -278,7 +278,6 @@ if __name__ == '__main__':
     parser.add_argument("--test_with_xray", action='store_true')
     parser.add_argument("--n_classes", type=int, default=4)
     parser.add_argument("--use_batchnorm", action='store_true')
-    parser.add_argument("--use_position_embedder", action='store_true')
     parser.add_argument("--check_training", action='store_true')
     parser.add_argument("--pretrained_segmentation_model", type=str)
     parser.add_argument("--use_instance_norm", action='store_true')
