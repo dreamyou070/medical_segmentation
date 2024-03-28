@@ -46,4 +46,3 @@ for folder in folders:
             pad_w = (256 - w) // 2
             new_test_mask_arr[pad_h:pad_h+h, pad_w:pad_w+w] = test_mask_arr
         np.save(os.path.join(test_mask_folder, test_mask_file), new_test_mask_arr)
-        

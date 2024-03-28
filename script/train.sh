@@ -1,4 +1,6 @@
 # !/bin/bash
+
+
 # 1_pe_basic_segmentation_model_a_cross_focal_layer_norm_head
 # 2_pe_basic_segmentation_model_a_cross_focal_batch_norm_head
 # 3_pe_basic_segmentation_model_a_cross_focal_instance_norm_head
@@ -10,10 +12,10 @@
 # 8_absolute_pe_do_semantic_position_segmentation_model_a_cross_focal_use_batch_norm_query_after_attn --use_batchnorm
 
 
-port_number=50581
+port_number=50501
 category="medical"
-obj_name="brain"
-benchmark="BraTS2020_Segmentation_256"
+obj_name="cardiac"
+benchmark="acdc"
 layer_name='layer_3'
 sub_folder="up_16_32_64"
 file_name="1_absolute_pe_do_semantic_position_segmentation_model_a_cross_focal_use_batch_norm_query"
