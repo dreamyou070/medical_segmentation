@@ -11,7 +11,7 @@
 # 7_relative_pe_basic_segmentation_model_a_cross_focal_use_batch_norm_query_before_attn_neighbor_size_7 --use_batchnorm
 
 
-port_number=50577
+port_number=50587
 category="medical"
 obj_name="leader_polyp"
 benchmark="bkai-igh-neopolyp"
