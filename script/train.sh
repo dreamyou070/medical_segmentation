@@ -34,4 +34,4 @@ accelerate launch --config_file ../../../gpu_config/gpu_0_config \
  --mask_res 256 \
  --absolute_position_embedder \
  --use_instance_norm \
- --use_query_after_attn
+ --saving_query_after_attn
