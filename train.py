@@ -17,7 +17,7 @@ from utils.optimizer import get_optimizer, get_scheduler_fix
 from utils.saving import save_model
 from utils.loss import FocalLoss, Multiclass_FocalLoss
 from utils.evaluate import evaluation_check
-from model.pe import AllPositionalEmbedding, AllPositionRelativeEmbedding
+from model.pe import AllPositionalEmbedding
 from safetensors.torch import load_file
 def main(args):
 
@@ -47,14 +47,12 @@ def main(args):
     # [2] pe
 
     if args.absolute_position_embedder:
-        position_embedder = AllPositionalEmbedding(pe_do_concat = args.pe_do_concat)
+        position_embedder = AllPositionalEmbedding(pe_do_concat = args.pe_do_concat,
+                                                   do_semantic_position = args.do_semantic_position)
         if args.position_embedder_weights is not None:
             position_embedder_state_dict = load_file(args.position_embedder_weights)
             position_embedder.load_state_dict(position_embedder_state_dict)
             position_embedder.to(dtype=weight_dtype)
-    elif args.relative_position_embedder:
-        position_embedder = AllPositionRelativeEmbedding(pe_do_concat = args.pe_do_concat,
-                                                           neighbor_size=args.neighbor_size)
 
     if args.aggregation_model_a:
         segmentation_head_class = Segmentation_Head_a
@@ -329,10 +327,10 @@ if __name__ == "__main__":
     parser.add_argument("--norm_type", type=str, default='batchnorm', choices=['batch_norm', 'instance_norm', 'layer_norm'])
     parser.add_argument("--non_linearity", type=str, default='relu', choices=['relu', 'leakyrelu', 'gelu'])
     parser.add_argument("--absolute_position_embedder", action='store_true')
-    parser.add_argument("--relative_position_embedder", action='store_true')
     parser.add_argument("--saving_query_before_attn", action='store_true')
     parser.add_argument("--saving_query_after_attn", action='store_true')
     parser.add_argument("--neighbor_size", type=int, default=3)
+    parser.add_argument("--do_semantic_position", action='store_true')
     args = parser.parse_args()
     unet_passing_argument(args)
     passing_argument(args)

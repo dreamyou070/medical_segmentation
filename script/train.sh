@@ -6,18 +6,17 @@
 # 5_absolute_pe_basic_segmentation_model_a_cross_focal_use_layer_norm_query_after_attn
 # 6_absolute_pe_basic_segmentation_model_a_cross_focal_use_instance_norm_query_after_attn --use_instance_norm
 
-# 7_relative_pe_basic_segmentation_model_a_cross_focal_use_batch_norm_query_before_attn_neighbor_size_3 --use_batchnorm
-# 7_relative_pe_basic_segmentation_model_a_cross_focal_use_batch_norm_query_before_attn_neighbor_size_5 --use_batchnorm
-# 7_relative_pe_basic_segmentation_model_a_cross_focal_use_batch_norm_query_before_attn_neighbor_size_7 --use_batchnorm
+# 7_absolute_pe_do_semantic_position_segmentation_model_a_cross_focal_use_batch_norm_query_before_attn --use_batchnorm
+# 8_absolute_pe_do_semantic_position_segmentation_model_a_cross_focal_use_batch_norm_query_after_attn --use_batchnorm
 
 
-port_number=50575
+port_number=50577
 category="medical"
 obj_name="leader_polyp"
 benchmark="bkai-igh-neopolyp"
 layer_name='layer_3'
 sub_folder="up_16_32_64"
-file_name="7_relative_pe_basic_segmentation_model_a_cross_focal_use_batch_norm_query_before_attn_neighbor_size_5"
+file_name="7_absolute_pe_do_semantic_position_segmentation_model_a_cross_focal_use_batch_norm_query_before_attn"
 #  --use_instance_norm
 accelerate launch --config_file ../../../gpu_config/gpu_0_config \
  --main_process_port $port_number ../train.py --log_with wandb \
@@ -40,4 +39,4 @@ accelerate launch --config_file ../../../gpu_config/gpu_0_config \
  --mask_res 256 \
  --use_batchnorm \
  --saving_query_before_attn \
- --neighbor_size 5
+ --do_semantic_position
