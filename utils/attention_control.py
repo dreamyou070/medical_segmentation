@@ -31,7 +31,7 @@ def register_attention_control(unet: nn.Module,controller: AttentionStore):
             key_ = self.to_k(context)
             value = self.to_v(context)
 
-            print(f'layer_name {layer_name} | after to_q {query.shape} | after to_k {key_.shape} | after to_v {value.shape}')
+            # print(f'layer_name {layer_name} | after to_q {query.shape} | after to_k {key_.shape} | after to_v {value.shape}')
             if noise_type is not None :
                 position_embedder = noise_type
                 if argument.use_position_embedder and argument.relative_position_embedder :
@@ -45,8 +45,9 @@ def register_attention_control(unet: nn.Module,controller: AttentionStore):
                 key = key.float()
             """ Second Trial """
             if trg_layer_list is not None and layer_name in trg_layer_list :
-                controller.save_query((query * self.scale), layer_name) # query = batch, seq_len, dim
-                controller.save_key(key_, layer_name)
+                if argument.saving_query_before_attn :
+                    controller.save_query((query * self.scale), layer_name) # query = batch, seq_len, dim
+                    controller.save_key(key_, layer_name)
             attention_scores = torch.baddbmm(
                 torch.empty(query.shape[0], query.shape[1], key.shape[1], dtype=query.dtype, device=query.device),
                 query, key.transpose(-1, -2),
@@ -56,6 +57,12 @@ def register_attention_control(unet: nn.Module,controller: AttentionStore):
             hidden_states = torch.bmm(attention_probs, value)
             hidden_states = self.reshape_batch_dim_to_heads(hidden_states)
             hidden_states = self.to_out[0](hidden_states)
+
+            if trg_layer_list is not None and layer_name in trg_layer_list :
+                if argument.saving_query_after_attn :
+                    controller.save_query((query * self.scale), layer_name) # query = batch, seq_len, dim
+                    controller.save_key(key_, layer_name)
+
             return hidden_states
         return forward
 
