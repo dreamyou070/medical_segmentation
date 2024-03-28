@@ -6,13 +6,18 @@
 # 5_absolute_pe_basic_segmentation_model_a_cross_focal_use_layer_norm_query_after_attn
 # 6_absolute_pe_basic_segmentation_model_a_cross_focal_use_instance_norm_query_after_attn --use_instance_norm
 
-port_number=50574
+# 7_relative_pe_basic_segmentation_model_a_cross_focal_use_batch_norm_query_before_attn --use_batchnorm
+# 8_relative_pe_basic_segmentation_model_a_cross_focal_use_layer_norm_query_before_attn
+# 9_relative_pe_basic_segmentation_model_a_cross_focal_use_instance_norm_query_before_attn --use_instance_norm
+
+
+port_number=50577
 category="medical"
 obj_name="leader_polyp"
 benchmark="bkai-igh-neopolyp"
 layer_name='layer_3'
 sub_folder="up_16_32_64"
-file_name="4_absolute_pe_basic_segmentation_model_a_cross_focal_use_batch_norm_query_after_attn"
+file_name="7_relative_pe_basic_segmentation_model_a_cross_focal_use_batch_norm_query_before_attn"
 #  --use_instance_norm
 accelerate launch --config_file ../../../gpu_config/gpu_0_config \
  --main_process_port $port_number ../train.py --log_with wandb \
@@ -29,8 +34,9 @@ accelerate launch --config_file ../../../gpu_config/gpu_0_config \
                     'up_blocks_2_attentions_2_transformer_blocks_0_attn2',
                     'up_blocks_3_attentions_2_transformer_blocks_0_attn2',]" \
  --use_position_embedder \
+ --relative_position_embedder \
  --aggregation_model_a \
  --n_classes 3 \
  --mask_res 256 \
- --absolute_position_embedder --use_batchnorm \
- --saving_query_after_attn
+ --use_batchnorm \
+ --saving_query_before_attn

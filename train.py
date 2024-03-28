@@ -46,11 +46,14 @@ def main(args):
     text_encoder, vae, unet, network = call_model_package(args, weight_dtype, accelerator)
     # [2] pe
     from model.pe import AllPositionalEmbedding
-    position_embedder = AllPositionalEmbedding(pe_do_concat = args.pe_do_concat)
-    if args.position_embedder_weights is not None:
-        position_embedder_state_dict = load_file(args.position_embedder_weights)
-        position_embedder.load_state_dict(position_embedder_state_dict)
-        position_embedder.to(dtype=weight_dtype)
+    if args.absolute_position_embedder:
+        position_embedder = AllPositionalEmbedding(pe_do_concat = args.pe_do_concat)
+        if args.position_embedder_weights is not None:
+            position_embedder_state_dict = load_file(args.position_embedder_weights)
+            position_embedder.load_state_dict(position_embedder_state_dict)
+            position_embedder.to(dtype=weight_dtype)
+    elif args.relative_position_embedder:
+        position_embedder = AllPositionalEmbedding(pe_do_concat = args.pe_do_concat)
 
     if args.aggregation_model_a:
         segmentation_head_class = Segmentation_Head_a
