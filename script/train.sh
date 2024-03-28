@@ -1,5 +1,5 @@
 # !/bin/bash
-
+# brain -> BraTS2020_Segmentation_256
 
 # 1_pe_basic_segmentation_model_a_cross_focal_layer_norm_head
 # 2_pe_basic_segmentation_model_a_cross_focal_batch_norm_head
@@ -12,11 +12,11 @@
 # 8_absolute_pe_do_semantic_position_segmentation_model_a_cross_focal_use_batch_norm_query_after_attn --use_batchnorm
 
 
-port_number=50511
+port_number=50555
 category="medical"
-obj_name="abdomen"
-trigger_word="abdomen"
-benchmark="abdomen"
+obj_name="brain"
+trigger_word="brain"
+benchmark="BraTS2020_Segmentation_256"
 layer_name='layer_3'
 sub_folder="up_16_32_64"
 file_name="1_absolute_pe_do_semantic_position_segmentation_model_a_cross_focal_use_batch_norm_query_gpu6"
@@ -38,6 +38,6 @@ accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_3_4_5_config \
  --use_position_embedder \
  --do_semantic_position \
  --aggregation_model_a \
- --n_classes 14 \
- --mask_res 512 \
+ --n_classes 4 \
+ --mask_res 256 \
  --use_batchnorm
