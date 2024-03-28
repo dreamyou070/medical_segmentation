@@ -10,13 +10,13 @@
 # 8_absolute_pe_do_semantic_position_segmentation_model_a_cross_focal_use_batch_norm_query_after_attn --use_batchnorm
 
 
-port_number=50577
+port_number=50581
 category="medical"
-obj_name="leader_polyp"
-benchmark="bkai-igh-neopolyp"
+obj_name="brain"
+benchmark="BraTS2020_Segmentation_256"
 layer_name='layer_3'
 sub_folder="up_16_32_64"
-file_name="7_absolute_pe_do_semantic_position_segmentation_model_a_cross_focal_use_batch_norm_query_before_attn"
+file_name="1_absolute_pe_do_semantic_position_segmentation_model_a_cross_focal_use_batch_norm_query"
 #  --use_instance_norm
 accelerate launch --config_file ../../../gpu_config/gpu_0_config \
  --main_process_port $port_number ../train.py --log_with wandb \
@@ -35,6 +35,6 @@ accelerate launch --config_file ../../../gpu_config/gpu_0_config \
  --use_position_embedder \
  --do_semantic_position \
  --aggregation_model_a \
- --n_classes 3 \
+ --n_classes 4 \
  --mask_res 256 \
  --use_batchnorm
