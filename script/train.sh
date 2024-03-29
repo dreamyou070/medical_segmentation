@@ -33,6 +33,6 @@ accelerate launch --config_file ../../../gpu_config/gpu_0_1_config \
                     'up_blocks_3_attentions_2_transformer_blocks_0_attn2',]" \
  --use_position_embedder \
  --aggregation_model_b \
- --n_classes 4 \
+ --n_classes 14 \
  --mask_res 512 \
  --use_batchnorm
