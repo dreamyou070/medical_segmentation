@@ -19,6 +19,8 @@ from utils.loss import FocalLoss, Multiclass_FocalLoss
 from utils.evaluate import evaluation_check
 from model.pe import AllPositionalEmbedding
 from safetensors.torch import load_file
+from monai.utils import DiceCEReduction, LossReduction, Weight, deprecated_arg, look_up_option, pytorch_after
+
 def main(args):
 
     print(f'\n step 1. setting')
@@ -79,6 +81,19 @@ def main(args):
     print(f'\n step 7. loss function')
     loss_CE = nn.CrossEntropyLoss()
     loss_FC = Multiclass_FocalLoss()
+    from monai.losses import DiceLoss
+    loss_Dice = DiceLoss(include_background=False,
+                         to_onehot_y=False,
+                         sigmoid=False,
+                         softmax=True,
+                         other_act=None,
+                         squared_pred=False,
+                         jaccard=False,
+                         reduction=LossReduction.MEAN,
+                         smooth_nr=1e-5,
+                         smooth_dr=1e-5,
+                         batch=False,
+                         weight=None)
 
     print(f'\n step 8. model to device')
     if args.use_position_embedder :
@@ -164,6 +179,12 @@ def main(args):
             focal_loss = loss_FC(masks_pred_,gt_flat.squeeze().to(masks_pred.device))  # N
             loss += focal_loss
             loss_dict['focal_loss'] = focal_loss.item()
+
+            # [5.3] Dice Loss
+            if args.use_dice_loss:
+                dice_loss = loss_Dice(masks_pred, gt)
+                loss += dice_loss
+                loss_dict['dice_loss'] = dice_loss.item()
 
             loss = loss.to(weight_dtype)
             current_loss = loss.detach().item()
@@ -332,6 +353,7 @@ if __name__ == "__main__":
     parser.add_argument("--neighbor_size", type=int, default=3)
     parser.add_argument("--do_semantic_position", action='store_true')
     parser.add_argument("--use_init_query", action='store_true')
+    parser.add_argument("--use_dice_loss", action='store_true')
     args = parser.parse_args()
     unet_passing_argument(args)
     passing_argument(args)
