@@ -235,5 +235,9 @@ class Segmentation_Head_c(nn.Module):
         if self.mask_res == 256 :
             x5_out = self.up5(x4_out)            # 1,320,256,256
             x_in = x5_out
+        elif self.mask_res == 512 :
+            x5_out = self.up5(x4_out)            # 1,320,256,256
+            x6_out = self.up6(x5_out)            # 1,320,512,512
+            x_in = x6_out
         logits = self.outc(x_in)  # 1,3,256,256
         return logits

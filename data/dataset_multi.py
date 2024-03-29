@@ -167,9 +167,6 @@ class TrainDataset_Seg(Dataset):
         gt = torch.tensor(gt).permute(2,0,1)        # 3,256,256
         # [3] gt flatten
         gt_flat = gt_arr.flatten() # 128*128
-        print(f'gt_flat (512*512) = {gt_flat.shape}')
-
-
         # [3] caption
         input_ids, attention_mask = self.get_input_ids(self.caption)  # input_ids = [77]
 
