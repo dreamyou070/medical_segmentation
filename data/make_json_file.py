@@ -10,7 +10,7 @@ def main() :
     json_data = json.load(json_file)
 
     # [1] base position
-    base_dir = 'data'
+    base_dir = ''
     base_img_dir = os.path.join(base_dir, 'imagesTr')
     base_label_dir = os.path.join(base_dir, 'labelsTr')
     files = os.listdir(base_img_dir)
