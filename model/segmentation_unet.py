@@ -190,24 +190,30 @@ class Segmentation_Head_b(nn.Module):
 
 class Segmentation_Head_c(nn.Module):
 
-    def __init__(self,  n_classes, bilinear=False, use_batchnorm=True, mask_res = 128, norm_type = 'batch_norm'):
+    def __init__(self,
+                 n_classes, bilinear=False,
+                 use_batchnorm=True,
+                 mask_res = 128,
+                 norm_type = 'batch_norm',
+                 use_instance_norm = True,
+                 use_init_query = False):
         super(Segmentation_Head_c, self).__init__()
 
         self.n_classes = n_classes
         self.mask_res = mask_res
         self.bilinear = bilinear
         factor = 2 if bilinear else 1 # always 1
-        self.up1 = (Up(1280, 640 // factor, bilinear, use_batchnorm, norm_type))
-        self.up2 = (Up(640, 320 // factor, bilinear, use_batchnorm, norm_type))
-        self.up3 = (Up(640, 320 // factor, bilinear, use_batchnorm, norm_type))
-        self.up4 = (Up_conv(in_channels = 640,
+        self.up1 = Up(1280, 640 // factor, bilinear, use_batchnorm, use_instance_norm)
+        self.up2 = Up(640, 320 // factor, bilinear, use_batchnorm, use_instance_norm)
+        self.up3 = Up(640, 320 // factor, bilinear, use_batchnorm, use_instance_norm)
+        self.up4 = Up_conv(in_channels = 640,
                             out_channels = 320,
-                            kernel_size=2))
+                            kernel_size=2)
         if self.mask_res == 256 :
-            self.up5 = (Up_conv(in_channels = 320,
+            self.up5 = Up_conv(in_channels = 320,
                                 out_channels = 320,
-                                kernel_size=2))
-        self.outc = (OutConv(320, n_classes))
+                                kernel_size=2)
+        self.outc = OutConv(320, n_classes)
 
     def forward(self, x16_out, x32_out, x64_out):
 
