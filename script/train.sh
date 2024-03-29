@@ -34,5 +34,5 @@ accelerate launch --config_file ../../../gpu_config/gpu_0_1_config \
  --use_position_embedder \
  --aggregation_model_b \
  --n_classes 4 \
- --mask_res 256 \
+ --mask_res 512 \
  --use_batchnorm
