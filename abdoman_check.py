@@ -25,9 +25,11 @@ def main():
     val_transforms = Compose([LoadImaged(keys=["image", "label"]),
                               EnsureChannelFirstd(keys=["image", "label"]),
                               Orientationd(keys=["image", "label"], axcodes="RAS"),
-                              Spacingd(keys=["image", "label"], pixdim=(1.5, 1.5, 2.0), mode=("bilinear", "nearest"), ),
+
+                              #Spacingd(keys=["image", "label"], pixdim=(1.5, 1.5, 2.0), mode=("bilinear", "nearest"), ),
                               ScaleIntensityRanged(keys=["image"],a_min=-175, a_max=250, b_min=0.0, b_max=1.0, clip=True),
-                              CropForegroundd(keys=["image", "label"], source_key="image"), ])
+                              CropForegroundd(keys=["image", "label"], source_key="image"),
+                              ])
     data_dir = r"/share0/dreamyou070/dreamyou070/MultiSegmentation/result/medical/data"
     split_json = "dataset_1.json"
     datasets = os.path.join(data_dir, split_json)
