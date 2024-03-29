@@ -168,8 +168,9 @@ def main(args):
                 masks_pred = segmentation_head(x16_out, x32_out, x64_out) # 1,4,128,128
             else :
                 masks_pred = segmentation_head(x16_out, x32_out, x64_out, x_init = latents) # 1,4,128,128
-            masks_pred_ = masks_pred.permute(0, 2, 3, 1).contiguous() # 1,128,128,4
+            masks_pred_ = masks_pred.permute(0, 2, 3, 1).contiguous() # 1,128,128,4 # mask_pred_ = [1,4,512,512]
             masks_pred_ = masks_pred_.view(-1, masks_pred_.shape[-1]).contiguous()
+
 
             # [5.1] Multiclassification Loss
             loss = loss_CE(masks_pred_,  gt_flat.squeeze().to(torch.long))  # 128*128
