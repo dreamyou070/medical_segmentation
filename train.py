@@ -131,12 +131,15 @@ def main(args):
             with torch.set_grad_enabled(True):
                 encoder_hidden_states = text_encoder(batch["input_ids"].to(device))["last_hidden_state"]
             image = batch['image'].to(dtype=weight_dtype)                                   # 1,3,512,512
+            print(f' image from loader, (1,3,128,128) = {image.shape}')
             gt_flat = batch['gt_flat'].to(dtype=weight_dtype)                               # 1,128*128
             gt = batch['gt'].to(dtype=weight_dtype)                                         # 1,3,256,256
             gt = gt.permute(0, 2, 3, 1).contiguous()#.view(-1, gt.shape[-1]).contiguous()   # 1,256,256,3
             gt = gt.view(-1, gt.shape[-1]).contiguous()
             with torch.no_grad():
+                # how does it do ?
                 latents = vae.encode(image).latent_dist.sample() * args.vae_scale_factor
+                print(f' image from vae, (1,4,64,64) = {image.shape}')
             with torch.set_grad_enabled(True):
                 unet(latents, 0, encoder_hidden_states, trg_layer_list=args.trg_layer_list, noise_type=position_embedder)
             query_dict, key_dict = controller.query_dict, controller.key_dict
