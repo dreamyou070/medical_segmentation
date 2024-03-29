@@ -155,24 +155,29 @@ class Segmentation_Head_a(nn.Module):
 
 class Segmentation_Head_b(nn.Module):
 
-    def __init__(self,  n_classes, bilinear=False, use_batchnorm=True, mask_res = 128,
-                 norm_type = 'batch_norm'):
+    def __init__(self,
+                 n_classes,
+                 bilinear=False,
+                 use_batchnorm=True,
+                 use_instance_norm=True,
+                 mask_res=128,
+                 use_init_query=False):
         super(Segmentation_Head_b, self).__init__()
 
         self.n_classes = n_classes
         self.mask_res = mask_res
         self.bilinear = bilinear
         factor = 2 if bilinear else 1
-        self.up1 = (Up(1280, 640 // factor, bilinear, use_batchnorm, norm_type))
-        self.up2 = (Up(640, 320 // factor, bilinear, use_batchnorm, norm_type))
-        self.up3 = (Up(640, 320 // factor, bilinear, use_batchnorm, norm_type))
-        self.up4 = (Up_conv(in_channels = 320,
+        self.up1 = Up(1280, 640 // factor, bilinear, use_batchnorm, use_instance_norm)
+        self.up2 = Up(640, 320 // factor, bilinear, use_batchnorm, use_instance_norm)
+        self.up3 = Up(640, 320 // factor, bilinear, use_batchnorm, use_instance_norm)
+        self.up4 = Up_conv(in_channels = 320,
                             out_channels=160,
-                            kernel_size=2))
+                            kernel_size=2)
         if self.mask_res == 256 :
-            self.up5 = (Up_conv(in_channels = 160,
+            self.up5 = Up_conv(in_channels = 160,
                                 out_channels = 160,
-                                kernel_size=2))
+                                kernel_size=2)
         elif self.mask_res == 512:
             self.up5 = Up_conv(in_channels=160,
                                out_channels=160,
@@ -221,12 +226,12 @@ class Segmentation_Head_c(nn.Module):
                             out_channels = 160,
                             kernel_size=2)
         if self.mask_res == 256 :
-            self.up5 = Up_conv(in_channels = 320,
+            self.up5 = Up_conv(in_channels = 160,
                                 out_channels = 160,
                                 kernel_size=2)
         elif self.mask_res == 512 :
 
-            self.up5 = Up_conv(in_channels=320,
+            self.up5 = Up_conv(in_channels=160,
                                out_channels=160,
                                kernel_size=2)
             self.up6 = Up_conv(in_channels=160,
