@@ -8,7 +8,7 @@
 # 4_absolute_pe_segmentation_model_c_cross_focal_use_batch_norm_query
 # 6_absolute_pe_segmentation_model_b_cross_focal_use_batch_norm_query
 
-port_number=56644
+port_number=56612
 category="medical"
 obj_name="abdomen"
 trigger_word="abdomen"
@@ -34,5 +34,5 @@ accelerate launch --config_file ../../../gpu_config/gpu_0_1_config \
  --use_position_embedder \
  --aggregation_model_c \
  --n_classes 14 \
- --mask_res 128 \
+ --mask_res 256 \
  --use_batchnorm
