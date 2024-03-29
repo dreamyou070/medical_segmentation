@@ -411,7 +411,7 @@ class Spacing(InvertibleTransform, LazyTransform):
                 Defaults to False
         """
         LazyTransform.__init__(self, lazy=lazy)
-        self.pixdim = np.array(ensure_tuple(pixdim), dtype=np.float64)
+        self.pixdim = np.array(ensure_tuple(pixdim), dtype=np.float64) # [1.5,1.5,2.0]
         self.min_pixdim = np.array(ensure_tuple(min_pixdim), dtype=np.float64)
         self.max_pixdim = np.array(ensure_tuple(max_pixdim), dtype=np.float64)
         self.diagonal = diagonal
@@ -422,9 +422,11 @@ class Spacing(InvertibleTransform, LazyTransform):
             if (not np.isnan(mn)) and (not np.isnan(mx)) and ((mx < mn) or (mn < 0)):
                 raise ValueError(f"min_pixdim {self.min_pixdim} must be positive, smaller than max {self.max_pixdim}.")
 
-        self.sp_resample = SpatialResample(
-            mode=mode, padding_mode=padding_mode, align_corners=align_corners, dtype=dtype, lazy=lazy
-        )
+        self.sp_resample = SpatialResample(mode=mode,
+                                           padding_mode=padding_mode,
+                                           align_corners=align_corners,
+                                           dtype=dtype,
+                                           lazy=lazy)
 
     @LazyTransform.lazy.setter  # type: ignore
     def lazy(self, val: bool) -> None:
@@ -473,7 +475,6 @@ class Spacing(InvertibleTransform, LazyTransform):
             lazy: a flag to indicate whether this transform should execute lazily or not
                 during this call. Setting this to False or True overrides the ``lazy`` flag set
                 during initialization for this call. Defaults to None.
-
         Raises:
             ValueError: When ``data_array`` has no spatial dimensions.
             ValueError: When ``pixdim`` is nonpositive.
@@ -482,9 +483,7 @@ class Spacing(InvertibleTransform, LazyTransform):
             data tensor or MetaTensor (resampled into `self.pixdim`).
 
         """
-        original_spatial_shape = (
-            data_array.peek_pending_shape() if isinstance(data_array, MetaTensor) else data_array.shape[1:]
-        )
+        original_spatial_shape = (data_array.peek_pending_shape() if isinstance(data_array, MetaTensor) else data_array.shape[1:])
         sr = len(original_spatial_shape)
         if sr <= 0:
             raise ValueError(f"data_array must have at least one spatial dimension, got {original_spatial_shape}.")
@@ -495,15 +494,12 @@ class Spacing(InvertibleTransform, LazyTransform):
             # default to identity
             input_affine = np.eye(sr + 1, dtype=np.float64)
         affine_ = to_affine_nd(sr, convert_data_type(input_affine, np.ndarray)[0])
-
         out_d = self.pixdim[:sr].copy()
         if out_d.size < sr:
             out_d = np.append(out_d, [out_d[-1]] * (sr - out_d.size))
 
         orig_d = affine_to_spacing(affine_, sr, out_d.dtype)
-        for idx, (_d, mn, mx) in enumerate(
-            zip_longest(orig_d, self.min_pixdim[:sr], self.max_pixdim[:sr], fillvalue=np.nan)
-        ):
+        for idx, (_d, mn, mx) in enumerate(zip_longest(orig_d, self.min_pixdim[:sr], self.max_pixdim[:sr], fillvalue=np.nan)):
             target = out_d[idx]
             mn = target if np.isnan(mn) else min(mn, target)
             mx = target if np.isnan(mx) else max(mx, target)
@@ -514,24 +510,31 @@ class Spacing(InvertibleTransform, LazyTransform):
         if not align_corners and scale_extent:
             warnings.warn("align_corners=False is not compatible with scale_extent=True.")
 
-        # compute output affine, shape and offset
-        new_affine = zoom_affine(affine_, out_d, diagonal=self.diagonal)
-        scale_extent = self.scale_extent if scale_extent is None else scale_extent
-        output_shape, offset = compute_shape_offset(original_spatial_shape, affine_, new_affine, scale_extent)
-        new_affine[:sr, -1] = offset[:sr]
 
+        # compute output affine, shape and offset
+        new_affine = zoom_affine(affine_, out_d, diagonal=self.diagonal) # 1.5 / 1.5 / 2 / 1
+        scale_extent = self.scale_extent if scale_extent is None else scale_extent
+        output_shape, offset = compute_shape_offset(original_spatial_shape,
+                                                    affine_,
+                                                    new_affine,
+                                                    scale_extent)
+        # output_shape = some new shae
+        # offset = len 3 torch
+
+
+        new_affine[:sr, -1] = offset[:sr]
         actual_shape = list(output_shape) if output_spatial_shape is None else output_spatial_shape
         lazy_ = self.lazy if lazy is None else lazy
-        data_array = self.sp_resample(
-            data_array,
-            dst_affine=torch.as_tensor(new_affine),
-            spatial_size=actual_shape,  # type: ignore
-            mode=mode,
-            padding_mode=padding_mode,
-            align_corners=align_corners,
-            dtype=dtype,
-            lazy=lazy_,
-        )
+
+        # SPATIAL RESAMPLE
+        data_array = self.sp_resample(data_array,
+                                      dst_affine=torch.as_tensor(new_affine), # [4,4]
+                                      spatial_size=actual_shape,              # output shape
+                                      mode=mode,                              # bilinear, near
+                                      padding_mode=padding_mode,              # how to pad
+                                      align_corners=align_corners,            # None
+                                      dtype=dtype,                            # float64
+                                      lazy=lazy_,)
         if self.recompute_affine and isinstance(data_array, MetaTensor):
             if lazy_:
                 raise NotImplementedError("recompute_affine is not supported with lazy evaluation.")

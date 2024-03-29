@@ -19,13 +19,13 @@ def main() :
         label_name = name.replace('img', 'label')
         img_path = f'imagesTr/{file}'
         label_path = f'labelsTr/{label_name}{ext}'
-        value = {'img': img_path,
+        value = {'image': img_path,
                  'label': label_path}
         if value not in json_data['validation'] :
             json_data['validation'].append(value)
 
     # [3] save json file
-    new_json_file_dir = r'dataset_1.json'
+    new_json_file_dir = r'dataset_0.json'
     with open(new_json_file_dir, 'w') as json_file:
         json.dump(json_data, json_file, indent=4)
 

@@ -242,9 +242,9 @@ class EnsureChannelFirstd(MapTransform):
 
     backend = EnsureChannelFirst.backend
 
-    def __init__(
-        self, keys: KeysCollection, strict_check: bool = True, allow_missing_keys: bool = False, channel_dim=None
-    ) -> None:
+    def __init__(self, keys: KeysCollection,
+                 strict_check: bool = True,
+                 allow_missing_keys: bool = False, channel_dim=None) -> None:
         """
         Args:
             keys: keys of the corresponding items to be transformed.
@@ -257,13 +257,15 @@ class EnsureChannelFirstd(MapTransform):
                 If this is set to `None`, this class relies on `img` or `meta_dict` to provide the channel dimension.
         """
         super().__init__(keys, allow_missing_keys)
-        self.adjuster = EnsureChannelFirst(strict_check=strict_check, channel_dim=channel_dim)
+        self.adjuster = EnsureChannelFirst(strict_check=strict_check, # True
+                                           channel_dim=channel_dim)   # None
 
     def __call__(self, data: Mapping[Hashable, torch.Tensor]) -> dict[Hashable, torch.Tensor]:
         d = dict(data)
         for key in self.key_iterator(d):
             meta_dict = d[key].meta if isinstance(d[key], MetaTensor) else None  # type: ignore[attr-defined]
-            d[key] = self.adjuster(d[key], meta_dict)
+            d[key] = self.adjuster(d[key],
+                                   meta_dict)
         return d
 
 

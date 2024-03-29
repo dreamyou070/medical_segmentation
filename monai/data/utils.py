@@ -880,8 +880,7 @@ def compute_shape_offset(
     spatial_shape: np.ndarray | Sequence[int],
     in_affine: NdarrayOrTensor,
     out_affine: NdarrayOrTensor,
-    scale_extent: bool = False,
-) -> tuple[np.ndarray, np.ndarray]:
+    scale_extent: bool = False,) -> tuple[np.ndarray, np.ndarray]:
     """
     Given input and output affine, compute appropriate shapes
     in the output space based on the input array's shape.

@@ -360,30 +360,15 @@ class ResampleToMatchd(MapTransform, InvertibleTransform, LazyTransform):
 
 
 class Spacingd(MapTransform, InvertibleTransform, LazyTransform):
-    """
-    Dictionary-based wrapper of :py:class:`monai.transforms.Spacing`.
 
-    This transform assumes the ``data`` dictionary has a key for the input
-    data's metadata and contains `affine` field.  The key is formed by ``key_{meta_key_postfix}``.
-
-    After resampling the input array, this transform will write the new affine
-    to the `affine` field of metadata which is formed by ``key_{meta_key_postfix}``.
-
-    This transform is capable of lazy execution. See the :ref:`Lazy Resampling topic<lazy_resampling>`
-    for more information.
-
-    see also:
-        :py:class:`monai.transforms.Spacing`
-    """
 
     backend = Spacing.backend
-
     def __init__(
         self,
-        keys: KeysCollection,
-        pixdim: Sequence[float] | float,
+        keys: KeysCollection,                       #
+        pixdim: Sequence[float] | float,            # (1.5, 1.5, 2.0)
         diagonal: bool = False,
-        mode: SequenceStr = GridSampleMode.BILINEAR,
+        mode: SequenceStr = GridSampleMode.BILINEAR, # ("bilinear", "nearest")
         padding_mode: SequenceStr = GridSamplePadMode.BORDER,
         align_corners: Sequence[bool] | bool = False,
         dtype: Sequence[DtypeLike] | DtypeLike = np.float64,
@@ -395,77 +380,16 @@ class Spacingd(MapTransform, InvertibleTransform, LazyTransform):
         allow_missing_keys: bool = False,
         lazy: bool = False,
     ) -> None:
-        """
-        Args:
-            pixdim: output voxel spacing. if providing a single number, will use it for the first dimension.
-                items of the pixdim sequence map to the spatial dimensions of input image, if length
-                of pixdim sequence is longer than image spatial dimensions, will ignore the longer part,
-                if shorter, will pad with `1.0`.
-                if the components of the `pixdim` are non-positive values, the transform will use the
-                corresponding components of the original pixdim, which is computed from the `affine`
-                matrix of input image.
-            diagonal: whether to resample the input to have a diagonal affine matrix.
-                If True, the input data is resampled to the following affine::
-
-                    np.diag((pixdim_0, pixdim_1, pixdim_2, 1))
-
-                This effectively resets the volume to the world coordinate system (RAS+ in nibabel).
-                The original orientation, rotation, shearing are not preserved.
-
-                If False, the axes orientation, orthogonal rotation and
-                translations components from the original affine will be
-                preserved in the target affine. This option will not flip/swap
-                axes against the original ones.
-            mode: {``"bilinear"``, ``"nearest"``} or spline interpolation order 0-5 (integers).
-                Interpolation mode to calculate output values. Defaults to ``"bilinear"``.
-                See also: https://pytorch.org/docs/stable/generated/torch.nn.functional.grid_sample.html
-                When it's an integer, the numpy (cpu tensor)/cupy (cuda tensor) backends will be used
-                and the value represents the order of the spline interpolation.
-                See also: https://docs.scipy.org/doc/scipy/reference/generated/scipy.ndimage.map_coordinates.html
-                It also can be a sequence, each element corresponds to a key in ``keys``.
-            padding_mode: {``"zeros"``, ``"border"``, ``"reflection"``}
-                Padding mode for outside grid values. Defaults to ``"border"``.
-                See also: https://pytorch.org/docs/stable/generated/torch.nn.functional.grid_sample.html
-                When `mode` is an integer, using numpy/cupy backends, this argument accepts
-                {'reflect', 'grid-mirror', 'constant', 'grid-constant', 'nearest', 'mirror', 'grid-wrap', 'wrap'}.
-                See also: https://docs.scipy.org/doc/scipy/reference/generated/scipy.ndimage.map_coordinates.html
-                It also can be a sequence, each element corresponds to a key in ``keys``.
-            align_corners: Geometrically, we consider the pixels of the input as squares rather than points.
-                See also: https://pytorch.org/docs/stable/generated/torch.nn.functional.grid_sample.html
-                It also can be a sequence of bool, each element corresponds to a key in ``keys``.
-            dtype: data type for resampling computation. Defaults to ``float64`` for best precision.
-                If None, use the data type of input data. To be compatible with other modules,
-                the output data type is always ``float32``.
-                It also can be a sequence of dtypes, each element corresponds to a key in ``keys``.
-            scale_extent: whether the scale is computed based on the spacing or the full extent of voxels,
-                default False. The option is ignored if output spatial size is specified when calling this transform.
-                See also: :py:func:`monai.data.utils.compute_shape_offset`. When this is True, `align_corners`
-                should be `True` because `compute_shape_offset` already provides the corner alignment shift/scaling.
-            recompute_affine: whether to recompute affine based on the output shape. The affine computed
-                analytically does not reflect the potential quantization errors in terms of the output shape.
-                Set this flag to True to recompute the output affine based on the actual pixdim. Default to ``False``.
-            min_pixdim: minimal input spacing to be resampled. If provided, input image with a larger spacing than this
-                value will be kept in its original spacing (not be resampled to `pixdim`). Set it to `None` to use the
-                value of `pixdim`. Default to `None`.
-            max_pixdim: maximal input spacing to be resampled. If provided, input image with a smaller spacing than this
-                value will be kept in its original spacing (not be resampled to `pixdim`). Set it to `None` to use the
-                value of `pixdim`. Default to `None`.
-            ensure_same_shape: when the inputs have the same spatial shape, and almost the same pixdim,
-                whether to ensure exactly the same output spatial shape.  Default to True.
-            allow_missing_keys: don't raise exception if key is missing.
-            lazy: a flag to indicate whether this transform should execute lazily or not.
-                Defaults to False
-        """
         MapTransform.__init__(self, keys, allow_missing_keys)
         LazyTransform.__init__(self, lazy=lazy)
-        self.spacing_transform = Spacing(
-            pixdim,
-            diagonal=diagonal,
-            recompute_affine=recompute_affine,
-            min_pixdim=min_pixdim,
-            max_pixdim=max_pixdim,
-            lazy=lazy,
-        )
+        # spacing transform
+        self.spacing_transform = Spacing(pixdim,
+                                         diagonal=diagonal,
+                                         recompute_affine=recompute_affine,
+                                         min_pixdim=min_pixdim,
+                                         max_pixdim=max_pixdim,
+                                         lazy=lazy,)
+
         self.mode = ensure_tuple_rep(mode, len(self.keys))
         self.padding_mode = ensure_tuple_rep(padding_mode, len(self.keys))
         self.align_corners = ensure_tuple_rep(align_corners, len(self.keys))
@@ -478,17 +402,19 @@ class Spacingd(MapTransform, InvertibleTransform, LazyTransform):
         self._lazy = val
         self.spacing_transform.lazy = val
 
-    def __call__(self, data: Mapping[Hashable, torch.Tensor], lazy: bool | None = None) -> dict[Hashable, torch.Tensor]:
+    def __call__(self,
+                 data: Mapping[Hashable, torch.Tensor],
+                 lazy: bool | None = None) -> dict[Hashable, torch.Tensor]:
+        # Shape Changed !!
         """
         Args:
-            data: a dictionary containing the tensor-like data to be processed. The ``keys`` specified
-                in this dictionary must be tensor like arrays that are channel first and have at most
-                three spatial dimensions
+            data:
+                a dictionary containing the tensor-like data to be processed.
+                The ``keys`` specified in this dictionary must be tensor like arrays that are channel first and have at most three spatial dimensions
             lazy: a flag to indicate whether this transform should execute lazily or not
                 during this call. Setting this to False or True overrides the ``lazy`` flag set
                 during initialization for this call. Defaults to None.
-
-        Returns:
+        Returns: # transformed
             a dictionary containing the transformed data, as well as any other data present in the dictionary
         """
         d: dict = dict(data)
@@ -496,29 +422,30 @@ class Spacingd(MapTransform, InvertibleTransform, LazyTransform):
         _init_shape, _pixdim, should_match = None, None, False
         output_shape_k = None  # tracking output shape
         lazy_ = self.lazy if lazy is None else lazy
-
-        for key, mode, padding_mode, align_corners, dtype, scale_extent in self.key_iterator(
-            d, self.mode, self.padding_mode, self.align_corners, self.dtype, self.scale_extent
-        ):
+        for key, mode, padding_mode, align_corners, dtype, scale_extent in self.key_iterator(d,
+                                                                                             self.mode,
+                                                                                             self.padding_mode,
+                                                                                             self.align_corners,
+                                                                                             self.dtype,
+                                                                                             self.scale_extent):
             if self.ensure_same_shape and isinstance(d[key], MetaTensor):
                 if _init_shape is None and _pixdim is None:
                     _init_shape, _pixdim = d[key].peek_pending_shape(), d[key].pixdim
                 else:
-                    should_match = np.allclose(_init_shape, d[key].peek_pending_shape()) and np.allclose(
-                        _pixdim, d[key].pixdim, atol=1e-3
-                    )
-            d[key] = self.spacing_transform(
-                data_array=d[key],
-                mode=mode,
-                padding_mode=padding_mode,
-                align_corners=align_corners,
-                dtype=dtype,
-                scale_extent=scale_extent,
-                output_spatial_shape=output_shape_k if should_match else None,
-                lazy=lazy_,
-            )
+                    should_match = np.allclose(_init_shape, d[key].peek_pending_shape()) and np.allclose(_pixdim, d[key].pixdim, atol=1e-3)
+
+            # spacing transform ...
+            d[key] = self.spacing_transform(data_array=d[key],
+                                            mode=mode, # bilinear, nearest
+                                            padding_mode=padding_mode,
+                                            align_corners=align_corners,
+                                            dtype=dtype,               # dtype
+                                            scale_extent=scale_extent, # scale_extent
+                                            output_spatial_shape=output_shape_k if should_match else None,
+                                            lazy=lazy_,)
             if output_shape_k is None:
                 output_shape_k = d[key].peek_pending_shape() if isinstance(d[key], MetaTensor) else d[key].shape[1:]
+
         return d
 
     def inverse(self, data: Mapping[Hashable, NdarrayOrTensor]) -> dict[Hashable, NdarrayOrTensor]:
