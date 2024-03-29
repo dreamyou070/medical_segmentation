@@ -61,7 +61,8 @@ def main(args):
     segmentation_head = segmentation_head_class(n_classes=args.n_classes,
                                                 mask_res=args.mask_res,
                                                 use_batchnorm=args.use_batchnorm,
-                                                use_instance_norm=args.use_instance_norm,)
+                                                use_instance_norm=args.use_instance_norm,
+                                                use_init_query =args.use_init_query)
 
     print(f'\n step 5. optimizer')
     args.max_train_steps = len(train_dataloader) * args.max_train_epochs
@@ -131,7 +132,6 @@ def main(args):
             with torch.set_grad_enabled(True):
                 encoder_hidden_states = text_encoder(batch["input_ids"].to(device))["last_hidden_state"]
             image = batch['image'].to(dtype=weight_dtype)                                   # 1,3,512,512
-            print(f' image from loader, (1,3,128,128) = {image.shape}')
             gt_flat = batch['gt_flat'].to(dtype=weight_dtype)                               # 1,128*128
             gt = batch['gt'].to(dtype=weight_dtype)                                         # 1,3,256,256
             gt = gt.permute(0, 2, 3, 1).contiguous()#.view(-1, gt.shape[-1]).contiguous()   # 1,256,256,3
@@ -139,7 +139,6 @@ def main(args):
             with torch.no_grad():
                 # how does it do ?
                 latents = vae.encode(image).latent_dist.sample() * args.vae_scale_factor
-                print(f' image from vae, (1,4,64,64)? or (1,4,16,16) = {latents.shape}')
             with torch.set_grad_enabled(True):
                 unet(latents, 0, encoder_hidden_states, trg_layer_list=args.trg_layer_list, noise_type=position_embedder)
             query_dict, key_dict = controller.query_dict, controller.key_dict
@@ -150,7 +149,10 @@ def main(args):
                 res = int(query.shape[1] ** 0.5)
                 q_dict[res] = reshape_batch_dim_to_heads(query) # 1, res,res,dim
             x16_out, x32_out, x64_out = q_dict[16], q_dict[32], q_dict[64]
-            masks_pred = segmentation_head(x16_out, x32_out, x64_out) # 1,4,128,128
+            if not args.use_init_query  :
+                masks_pred = segmentation_head(x16_out, x32_out, x64_out) # 1,4,128,128
+            else :
+                masks_pred = segmentation_head(x16_out, x32_out, x64_out, x_init = latents) # 1,4,128,128
             masks_pred_ = masks_pred.permute(0, 2, 3, 1).contiguous() # 1,128,128,4
             masks_pred_ = masks_pred_.view(-1, masks_pred_.shape[-1]).contiguous()
 
@@ -329,6 +331,7 @@ if __name__ == "__main__":
     parser.add_argument("--non_linearity", type=str, default='relu', choices=['relu', 'leakyrelu', 'gelu'])
     parser.add_argument("--neighbor_size", type=int, default=3)
     parser.add_argument("--do_semantic_position", action='store_true')
+    parser.add_argument("--use_init_query", action='store_true')
     args = parser.parse_args()
     unet_passing_argument(args)
     passing_argument(args)

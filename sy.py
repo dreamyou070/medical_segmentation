@@ -4,9 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-#x16_out = torch.randn(1, 1280, 16, 16)
-#x32_out = torch.randn(1, 640, 32, 32)
-#x64_out = torch.randn(1, 320, 64, 64)
+
 
 class DoubleConv(nn.Module):
     """(convolution => [BN] => ReLU) * 2"""
@@ -153,72 +151,13 @@ class Segmentation_Head_a(nn.Module):
         logits = self.outc(x_in)  # 1,4, 128,128
         return logits
 
-class Segmentation_Head_b(nn.Module):
 
-    def __init__(self,  n_classes, bilinear=False, use_batchnorm=True, mask_res = 128,
-                 norm_type = 'batch_norm'):
-        super(Segmentation_Head_b, self).__init__()
-
-        self.n_classes = n_classes
-        self.mask_res = mask_res
-        self.bilinear = bilinear
-        factor = 2 if bilinear else 1
-        self.up1 = (Up(1280, 640 // factor, bilinear, use_batchnorm, norm_type))
-        self.up2 = (Up(640, 320 // factor, bilinear, use_batchnorm, norm_type))
-        self.up3 = (Up(640, 320 // factor, bilinear, use_batchnorm, norm_type))
-        self.up4 = (Up_conv(in_channels = 320,
-                            out_channels=160,
-                            kernel_size=2))
-        if self.mask_res == 256 :
-            self.up5 = (Up_conv(in_channels = 160,
-                                out_channels = 160,
-                                kernel_size=2))
-        self.outc = (OutConv(160, n_classes))
-
-    def forward(self, x16_out, x32_out, x64_out):
-
-        x1_out = self.up1(x16_out, x32_out)  # 1,640,32,32
-        x2_out = self.up2(x32_out, x64_out)  # 1,320,64,64
-        x3_out = self.up3(x1_out, x2_out)    # 1,320,64,64
-        x4_out = self.up4(x3_out)            # 1,160, 256,256
-        x_in = x4_out
-        if self.mask_res == 256 :
-            x5_out = self.up5(x4_out)        # 1,160,256,256
-            x_in = x5_out
-        logits = self.outc(x_in)  # 1,3,256,256
-        return logits
-
-class Segmentation_Head_c(nn.Module):
-
-    def __init__(self,  n_classes, bilinear=False, use_batchnorm=True, mask_res = 128, norm_type = 'batch_norm'):
-        super(Segmentation_Head_c, self).__init__()
-
-        self.n_classes = n_classes
-        self.mask_res = mask_res
-        self.bilinear = bilinear
-        factor = 2 if bilinear else 1 # always 1
-        self.up1 = (Up(1280, 640 // factor, bilinear, use_batchnorm, norm_type))
-        self.up2 = (Up(640, 320 // factor, bilinear, use_batchnorm, norm_type))
-        self.up3 = (Up(640, 320 // factor, bilinear, use_batchnorm, norm_type))
-        self.up4 = (Up_conv(in_channels = 640,
-                            out_channels = 320,
-                            kernel_size=2))
-        if self.mask_res == 256 :
-            self.up5 = (Up_conv(in_channels = 320,
-                                out_channels = 320,
-                                kernel_size=2))
-        self.outc = (OutConv(320, n_classes))
-
-    def forward(self, x16_out, x32_out, x64_out):
-
-        x1_out = self.up1(x16_out, x32_out)     # 1,640,32,32
-        x2_out = self.up2(x32_out, x64_out)     # 1,320,64,64
-        x3_out = self.up3(x1_out, x2_out)       # 1,320,64,64
-        x = torch.cat([x3_out, x64_out], dim=1) # 1,640,64,64
-        x4_out = self.up4(x)                    # 1,320,128,128
-        x_in = x4_out
-        if self.mask_res == 256 :
-            x5_out = self.up5(x4_out)            # 1,320,256,256
-            x_in = x5_out
-        logits = self.outc(x_in)  # 1,3,256,256
-        return logits
+x16_out = torch.randn(1, 1280, 16, 16)
+x32_out = torch.randn(1, 640, 32, 32)
+x64_out = torch.randn(1, 320, 64, 64)
+x_init = torch.randn(1,4,64,64)
+model = Segmentation_Head_a(4, use_init_query=False)
+#init_conv = nn.Conv2d(4, 320, kernel_size=3, padding=1, bias=False)
+#x_init = init_conv(x_init)
+#print(x_init.shape)
+output = model(x16_out, x32_out, x64_out)
