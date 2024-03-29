@@ -220,7 +220,7 @@ class Segmentation_Head_c(nn.Module):
             self.up6 = Up_conv(in_channels = 320,
                                out_channels = 320,
                                kernel_size=2)
-            
+
 
         self.outc = OutConv(320, n_classes)
 
