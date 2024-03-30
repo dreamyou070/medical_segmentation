@@ -39,7 +39,7 @@ def main(args):
     if args.seed is None :
         args.seed = random.randint(0, 2 ** 32)
     set_seed(args.seed)
-    train_dataloader, test_dataloader, patch_num = call_dataset(args)
+    train_dataloader, test_dataloader = call_dataset(args)
 
     print(f'\n step 3. preparing accelerator')
     accelerator = prepare_accelerator(args)
@@ -51,8 +51,7 @@ def main(args):
     # [2] pe
     position_embedder = AllPositionalEmbedding(pe_do_concat = args.pe_do_concat,
                                                do_semantic_position = args.do_semantic_position,
-                                               use_patch = args.use_patch,
-                                               patch_num = patch_num)
+                                               )
 
     if args.position_embedder_weights is not None:
         position_embedder_state_dict = load_file(args.position_embedder_weights)
@@ -66,7 +65,7 @@ def main(args):
     if args.aggregation_model_c :
         segmentation_head_class = Segmentation_Head_c
     segmentation_head = segmentation_head_class(n_classes=args.n_classes,
-                                                mask_res=args.patch_size,
+                                                mask_res=args.mask_res,
                                                 use_batchnorm=args.use_batchnorm,
                                                 use_instance_norm=args.use_instance_norm,
                                                 use_init_query =args.use_init_query)
@@ -86,6 +85,15 @@ def main(args):
     print(f'\n step 7. loss function')
     loss_CE = nn.CrossEntropyLoss()
     loss_FC = Multiclass_FocalLoss()
+    if args.use_monai_focal_loss :
+        from monai.losses import FocalLoss
+        loss_FC = FocalLoss(include_background=False,
+                            to_onehot_y=True,
+                            gamma=2.0,
+                            weight=None,
+                            reduction=LossReduction.MEAN,
+                            use_softmax=True)
+
     from monai.losses import DiceLoss
     loss_Dice = DiceLoss(include_background=False,
                          to_onehot_y=False,
@@ -148,20 +156,22 @@ def main(args):
 
         for step, batch in enumerate(train_dataloader):
             device = accelerator.device
-
+            loss_dict = {}
             with torch.set_grad_enabled(True):
                 encoder_hidden_states = text_encoder(batch["input_ids"].to(device))["last_hidden_state"]
 
             if args.use_patch :
+                patch_num = image.shape[1]
                 for i in range(patch_num):
-                    loss_dict = {}
                     patch_idx = i
                     image = batch['image'][:,i,:,:,:]
                     gt_flat = batch['gt_flat'][:,i,:]
                     gt = batch['gt'][:,i,:,:,:].to(dtype=weight_dtype)  # 1,3,256,256
                     gt = gt.permute(0, 2, 3, 1).contiguous()  # .view(-1, gt.shape[-1]).contiguous()   # 1,256,256,3
                     gt = gt.view(-1, gt.shape[-1]).contiguous()
+
                     with torch.no_grad():
+                        # how does it do ?
                         latents = vae.encode(image).latent_dist.sample() * args.vae_scale_factor
                     with torch.set_grad_enabled(True):
                         unet(latents,
@@ -181,39 +191,8 @@ def main(args):
                         masks_pred = segmentation_head(x16_out, x32_out, x64_out)  # 1,4,128,128
                     else:
                         masks_pred = segmentation_head(x16_out, x32_out, x64_out, x_init=latents)  # 1,4,128,128
-                    masks_pred_ = masks_pred.permute(0, 2, 3, 1).contiguous()  # 1,64,64,4 # mask_pred_ = [1,4,512,512]
+                    masks_pred_ = masks_pred.permute(0, 2, 3, 1).contiguous()  # 1,128,128,4 # mask_pred_ = [1,4,512,512]
                     masks_pred_ = masks_pred_.view(-1, masks_pred_.shape[-1]).contiguous()
-
-                    # [5.1] Multiclassification Loss
-                    loss = loss_CE(masks_pred_,gt_flat.squeeze().to(torch.long))  # 128*128
-                    loss_dict['cross_entropy_loss'] = loss.item()
-
-                    # [5.2] Focal Loss
-                    focal_loss = loss_FC(masks_pred_, gt_flat.squeeze().to(masks_pred.device))  # N
-                    loss += focal_loss
-                    loss_dict['focal_loss'] = focal_loss.item()
-                    # [5.3] Dice Loss
-                    if args.use_dice_loss:
-                        dice_loss = loss_Dice(masks_pred, gt)
-                        loss += dice_loss
-                        loss_dict['dice_loss'] = dice_loss.item()
-                    loss = loss.to(weight_dtype)
-                    current_loss = loss.detach().item()
-                    if epoch == args.start_epoch:
-                        loss_list.append(current_loss)
-                    else:
-                        epoch_loss_total -= loss_list[step]
-                        loss_list[step] = current_loss
-                    epoch_loss_total += current_loss
-                    avr_loss = epoch_loss_total / len(loss_list)
-                    loss_dict['avr_loss'] = avr_loss
-
-                    # retain graph true
-                    accelerator.backward(loss, retain_graph=True)
-                    optimizer.step()
-                    lr_scheduler.step()
-                    optimizer.zero_grad(set_to_none=True)
-
 
             else :
                 image = batch['image'].to(dtype=weight_dtype)  # 1,3,512,512
@@ -241,46 +220,36 @@ def main(args):
                 masks_pred_ = masks_pred.permute(0, 2, 3, 1).contiguous() # 1,128,128,4 # mask_pred_ = [1,4,512,512]
                 masks_pred_ = masks_pred_.view(-1, masks_pred_.shape[-1]).contiguous()
 
-                # [5.1] Multiclassification Loss
-                loss = loss_CE(masks_pred_,  gt_flat.squeeze().to(torch.long))  # 128*128
-                loss_dict['cross_entropy_loss'] = loss.item()
 
-                # [5.2] Focal Loss
-                focal_loss = loss_FC(masks_pred_,gt_flat.squeeze().to(masks_pred.device))  # N
-                loss += focal_loss
-                loss_dict['focal_loss'] = focal_loss.item()
+            # [5.1] Multiclassification Loss
+            loss = loss_CE(masks_pred_,  gt_flat.squeeze().to(torch.long))  # 128*128
+            loss_dict['cross_entropy_loss'] = loss.item()
 
-                # [5.3] Dice Loss
-                if args.use_dice_loss:
-                    dice_loss = loss_Dice(masks_pred, gt)
-                    loss += dice_loss
-                    loss_dict['dice_loss'] = dice_loss.item()
+            # [5.2] Focal Loss
+            focal_loss = loss_FC(masks_pred_,gt_flat.squeeze().to(masks_pred.device))  # N
+            loss += focal_loss
+            loss_dict['focal_loss'] = focal_loss.item()
 
-                loss = loss.to(weight_dtype)
-                current_loss = loss.detach().item()
-                if epoch == args.start_epoch:
-                    loss_list.append(current_loss)
-                else:
-                    epoch_loss_total -= loss_list[step]
-                    loss_list[step] = current_loss
-                epoch_loss_total += current_loss
-                avr_loss = epoch_loss_total / len(loss_list)
-                loss_dict['avr_loss'] = avr_loss
-                accelerator.backward(loss)
-                optimizer.step()
-                lr_scheduler.step()
-                optimizer.zero_grad(set_to_none=True)
+            # [5.3] Dice Loss
+            if args.use_dice_loss:
+                dice_loss = loss_Dice(masks_pred, gt)
+                loss += dice_loss
+                loss_dict['dice_loss'] = dice_loss.item()
 
-
-
-
-
-
-
-
-
-
-
+            loss = loss.to(weight_dtype)
+            current_loss = loss.detach().item()
+            if epoch == args.start_epoch:
+                loss_list.append(current_loss)
+            else:
+                epoch_loss_total -= loss_list[step]
+                loss_list[step] = current_loss
+            epoch_loss_total += current_loss
+            avr_loss = epoch_loss_total / len(loss_list)
+            loss_dict['avr_loss'] = avr_loss
+            accelerator.backward(loss)
+            optimizer.step()
+            lr_scheduler.step()
+            optimizer.zero_grad(set_to_none=True)
             if accelerator.sync_gradients:
                 progress_bar.update(1)
                 global_step += 1
@@ -436,7 +405,8 @@ if __name__ == "__main__":
     parser.add_argument("--use_init_query", action='store_true')
     parser.add_argument("--use_dice_loss", action='store_true')
     parser.add_argument("--use_patch", action='store_true')
-    parser.add_argument("--patch_size", type=int, default=64)
+    parser.add_argument("--use_monai_focal_loss", action='store_true')
+
     args = parser.parse_args()
     unet_passing_argument(args)
     passing_argument(args)

@@ -15,7 +15,7 @@ trigger_word="brain"
 benchmark="BraTS2020_Segmentation_256"
 layer_name='layer_3'
 sub_folder="up_16_32_64"
-file_name="patch_test"
+file_name="4_absolute_pe_segmentation_model_c_cross_backgroud_non_focal_use_batch_norm_query"
 # --use_instance_norm
 accelerate launch --config_file ../../../gpu_config/gpu_0_config \
  --main_process_port $port_number ../train.py --log_with wandb \
@@ -32,9 +32,8 @@ accelerate launch --config_file ../../../gpu_config/gpu_0_config \
                     'up_blocks_2_attentions_2_transformer_blocks_0_attn2',
                     'up_blocks_3_attentions_2_transformer_blocks_0_attn2',]" \
  --use_position_embedder \
- --aggregation_model_a \
+ --aggregation_model_c \
  --n_classes 4 \
  --mask_res 256 \
- --patch_size 64 \
  --use_batchnorm \
- --use_patch
+ --use_monai_focal_loss
