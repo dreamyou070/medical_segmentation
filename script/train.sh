@@ -6,7 +6,7 @@
 # 4_absolute_pe_segmentation_model_c_cross_focal_use_batch_norm_query
 # 6_absolute_pe_segmentation_model_b_cross_focal_use_batch_norm_query
 
-port_number=51241
+port_number=51251
 category="medical"
 obj_name="abdomen"
 trigger_word="abdomen"
