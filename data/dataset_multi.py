@@ -77,8 +77,8 @@ class TrainDataset_Seg(Dataset):
                  caption: str = "necrotic, edema, tumor",
                  latent_res: int = 64,
                  n_classes: int = 4,
-                 single_modality = False,
-                 mask_res = 128,):
+                 mask_res = 128,
+                 use_data_aug = False,):
 
         # [1] base image
         self.root_dir = root_dir
@@ -103,8 +103,10 @@ class TrainDataset_Seg(Dataset):
         self.gt_paths = gt_paths
         self.latent_res = latent_res
         self.n_classes = n_classes
-        self.single_modality = single_modality
         self.mask_res = mask_res
+        self.use_data_aug = use_data_aug
+
+
 
     def __len__(self):
         return len(self.image_paths)
@@ -140,18 +142,34 @@ class TrainDataset_Seg(Dataset):
         img_path = self.image_paths[idx]
         img = self.load_image(img_path, self.resize_shape[0], self.resize_shape[1], type='RGB')  # np.array,
 
+        if self.use_data_aug :
+            # rotating
+            random_p = np.random.rand()
+            if random_p < 0.25:
+                number = 1
+            elif 0.25 <= random_p < 0.5:
+                number = 2
+            elif 0.5 <= random_p < 0.75:
+                number = 3
+            elif 0.75 <= random_p:
+                number = 4
+            img = np.rot90(img, k=number)
+        img = self.transform(img)
+
         # [2] gt dir
         gt_path = self.gt_paths[idx]  #
         gt_arr = np.load(gt_path)     # 256,256 (brain tumor case)
+        if self.use_data_aug:
+            gt_arr = np.rot90(gt_arr, k=number)
         if self.caption == 'brain':
-            gt_arr = np.where(gt_arr==4, 3, gt_arr)
+            gt_arr = np.where(gt_arr==4, 3, gt_arr) # 4 -> 3
 
-        img = self.transform(img)
-        gt_arr_ = to_categorical(gt_arr)
+        gt_arr_ = to_categorical(gt_arr, num_classes=self.n_classes)
         class_num = gt_arr_.shape[-1]
         gt = np.zeros((self.mask_res,   # 256
                        self.mask_res,   # 256
                        self.n_classes)) # 3
+
         # 256,256,3
         gt[:,:,:class_num] = gt_arr_
         gt = torch.tensor(gt).permute(2,0,1)        # 3,256,256

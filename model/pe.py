@@ -134,17 +134,13 @@ class AllPositionalEmbedding(nn.Module):
 
     def __init__(self,
                  pe_do_concat,
-                 do_semantic_position,
-                 use_patch,
-                 patch_num) -> None:
+                 do_semantic_position,) -> None:
         super().__init__()
 
         self.layer_dict = self.layer_names_res_dim
         self.positional_encodings = {}
         self.do_concat = pe_do_concat
         self.do_semantic_position = do_semantic_position
-        self.use_patch = use_patch
-        self.patch_encodings = {}
         for layer_name in self.layer_dict.keys() :
             res, dim = self.layer_dict[layer_name]
 
@@ -153,10 +149,6 @@ class AllPositionalEmbedding(nn.Module):
 
             elif self.do_semantic_position :
                 self.positional_encodings[layer_name] = SinglePositional_Semantic_Embedding(max_len = res*res, d_model = dim)
-
-            elif self.use_patch :
-                for patch_index in range(patch_num) :
-                    self.positional_encodings[layer_name, patch_index] = SinglePositional_Patch_Embedding(max_len=res * res, d_model=dim)
 
             else :
                 self.positional_encodings[layer_name] = SinglePositionalEmbedding(max_len = res*res, d_model = dim)
@@ -170,12 +162,9 @@ class AllPositionalEmbedding(nn.Module):
 
 
         if layer_name in self.positional_encodings.keys() :
-            if self.use_patch :
-                patch_embedding = self.positional_encodings[layer_name, patch_idx]
-                output = patch_embedding(x)
-            else :
-                position_embedder = self.positional_encodings[layer_name]
-                output = position_embedder(x)
+
+            position_embedder = self.positional_encodings[layer_name]
+            output = position_embedder(x)
 
             return output
         else :
