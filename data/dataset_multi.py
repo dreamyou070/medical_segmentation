@@ -174,7 +174,7 @@ class TrainDataset_Seg(Dataset):
                     patch_pil = Image.fromarray(patch).resize((512, 512), Image.BICUBIC)
                     patch = np.array(patch_pil)
                     image_patches.append(self.transform(patch))
-            img = torch.stach(image_patches)
+            img = torch.stack(image_patches)
 
         else :
             img = self.transform(img)
