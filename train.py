@@ -107,11 +107,15 @@ def main(args):
                          smooth_dr=1e-5,
                          batch=False,
                          weight=None)
-    loss_dicece = DiceCELoss(to_onehot_y=True,
+    loss_dicece = DiceCELoss(include_background=False,
+                             to_onehot_y=False,
+                             sigmoid = False,
                              softmax=True,
                              squared_pred=True,
+                             lambda_dice=args.dice_weight,
                              smooth_nr=1e-5,
-                             smooth_dr=1e-5)
+                             smooth_dr=1e-5,
+                             weight=None,)
 
     print(f'\n step 8. model to device')
     if args.use_position_embedder :
