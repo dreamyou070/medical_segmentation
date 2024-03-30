@@ -204,6 +204,7 @@ def main(args):
             # [5.4] Deactivating Loss
             # masks_pred = Batch, Class_num, H, W
             if args.deactivating_loss :
+                eps = 1e-15
                 """ background have not many to train """
                 deactivating_loss = []
                 pred_prob = torch.softmax(masks_pred, dim=1)
@@ -213,21 +214,10 @@ def main(args):
                 for i in range(args.n_classes):
                     prob_map = pred_prob[..., i]  # 1,128,128
                     gt_map = (1-gt[..., i])  # 1,128,128
-                    loss = (prob_map * gt_map)/gt_map.sum()
+                    loss = (prob_map * gt_map)/(gt_map.sum()+eps)
                     deactivating_loss.append(loss.sum())
                 deactivating_loss = torch.stack(deactivating_loss).sum()
-                print(f'deactivating_loss = {deactivating_loss}')
                 loss += deactivating_loss
-                print(f'loss = {loss}')
-
-
-
-
-
-
-
-
-
 
             loss = loss.to(weight_dtype)
             current_loss = loss.detach().item()
