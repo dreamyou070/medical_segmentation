@@ -153,7 +153,6 @@ def main(args):
                 encoder_hidden_states = text_encoder(batch["input_ids"].to(device))["last_hidden_state"]
 
             if args.use_patch :
-                patch_num = image.shape[1]
                 for i in range(patch_num):
                     patch_idx = i
                     image = batch['image'][:,i,:,:,:]
