@@ -22,14 +22,16 @@ def register_attention_control(unet: nn.Module,controller: AttentionStore):
             """ cross self rechecking necessary """
 
             if noise_type is not None :
-                if type(noise_type) != list :
+                if argument.use_patch :
+                    position_embedder, patch_idx = noise_type
+                    if argument.use_position_embedder :
+                        hidden_states = position_embedder(hidden_states, layer_name, patch_idx)
+                else :
                     position_embedder = noise_type
                     if argument.use_position_embedder :
                         hidden_states = position_embedder(hidden_states, layer_name)
-                else :
-                    position_embedder, patch_idx = noise_type
-                    if argument.use_position_embedder :
-                        hidden_states = position_embedder(hidden_states, layer_name)
+
+
 
             query = self.to_q(hidden_states)
             context = context if context is not None else hidden_states

@@ -39,7 +39,7 @@ def main(args):
     if args.seed is None :
         args.seed = random.randint(0, 2 ** 32)
     set_seed(args.seed)
-    train_dataloader, test_dataloader = call_dataset(args)
+    train_dataloader, test_dataloader, patch_num = call_dataset(args)
 
     print(f'\n step 3. preparing accelerator')
     accelerator = prepare_accelerator(args)
@@ -50,7 +50,10 @@ def main(args):
     text_encoder, vae, unet, network = call_model_package(args, weight_dtype, accelerator)
     # [2] pe
     position_embedder = AllPositionalEmbedding(pe_do_concat = args.pe_do_concat,
-                                               do_semantic_position = args.do_semantic_position)
+                                               do_semantic_position = args.do_semantic_position,
+                                               use_patch = args.use_patch,
+                                               patch_num = patch_num)
+
     if args.position_embedder_weights is not None:
         position_embedder_state_dict = load_file(args.position_embedder_weights)
         position_embedder.load_state_dict(position_embedder_state_dict)
@@ -63,7 +66,7 @@ def main(args):
     if args.aggregation_model_c :
         segmentation_head_class = Segmentation_Head_c
     segmentation_head = segmentation_head_class(n_classes=args.n_classes,
-                                                mask_res=args.mask_res,
+                                                mask_res=args.patch_size,
                                                 use_batchnorm=args.use_batchnorm,
                                                 use_instance_norm=args.use_instance_norm,
                                                 use_init_query =args.use_init_query)
@@ -148,11 +151,6 @@ def main(args):
             loss_dict = {}
             with torch.set_grad_enabled(True):
                 encoder_hidden_states = text_encoder(batch["input_ids"].to(device))["last_hidden_state"]
-            image = batch['image'].to(dtype=weight_dtype)                                   # 1,3,512,512
-            gt_flat = batch['gt_flat'].to(dtype=weight_dtype)                               # 1,128*128
-            gt = batch['gt'].to(dtype=weight_dtype)                                         # 1,3,256,256
-            gt = gt.permute(0, 2, 3, 1).contiguous()#.view(-1, gt.shape[-1]).contiguous()   # 1,256,256,3
-            gt = gt.view(-1, gt.shape[-1]).contiguous()
 
             if args.use_patch :
                 patch_num = image.shape[1]
@@ -189,6 +187,11 @@ def main(args):
                     masks_pred_ = masks_pred_.view(-1, masks_pred_.shape[-1]).contiguous()
 
             else :
+                image = batch['image'].to(dtype=weight_dtype)  # 1,3,512,512
+                gt_flat = batch['gt_flat'].to(dtype=weight_dtype)  # 1,128*128
+                gt = batch['gt'].to(dtype=weight_dtype)  # 1,3,256,256
+                gt = gt.permute(0, 2, 3, 1).contiguous()  # .view(-1, gt.shape[-1]).contiguous()   # 1,256,256,3
+                gt = gt.view(-1, gt.shape[-1]).contiguous()
                 with torch.no_grad():
                     # how does it do ?
                     latents = vae.encode(image).latent_dist.sample() * args.vae_scale_factor
@@ -394,6 +397,7 @@ if __name__ == "__main__":
     parser.add_argument("--use_init_query", action='store_true')
     parser.add_argument("--use_dice_loss", action='store_true')
     parser.add_argument("--use_patch", action='store_true')
+    parser.add_argument("--patch_size", type=int, default=64)
     args = parser.parse_args()
     unet_passing_argument(args)
     passing_argument(args)

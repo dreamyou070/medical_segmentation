@@ -2,7 +2,30 @@ import torch.nn as nn
 import torch
 import einops
 
+class SinglePositional_Patch_Embedding(nn.Module):
 
+    def __init__(self,
+                 max_len: int = 64 * 64,
+                 d_model: int = 320, ):
+        super().__init__()
+        self.positional_encodings = nn.Parameter(torch.randn(1,max_len, d_model), requires_grad=True)
+        self.linear = nn.Linear(d_model, d_model)
+
+    def forward(self, x: torch.Tensor):
+
+        start_dim = 3
+        if x.dim() == 4:
+            start_dim = 4
+            x = einops.rearrange(x, 'b c h w -> b (h w) c')  # B,H*W,C
+        b_size = x.shape[0]
+        res = int(x.shape[1] ** 0.5)
+        pe = self.positional_encodings.expand(b_size, -1, -1).to(x.device)
+        self.linear = self.linear.to(x.device)
+        pe = self.linear(pe)
+        x = x + pe
+        if start_dim == 4:
+            x = einops.rearrange(x, 'b (h w) c -> b c h w', h=res, w=res)
+        return x
 class SinglePositionalEmbedding(nn.Module):
 
     def __init__(self,
@@ -111,13 +134,17 @@ class AllPositionalEmbedding(nn.Module):
 
     def __init__(self,
                  pe_do_concat,
-                 do_semantic_position) -> None:
+                 do_semantic_position,
+                 use_patch,
+                 patch_num) -> None:
         super().__init__()
 
         self.layer_dict = self.layer_names_res_dim
         self.positional_encodings = {}
         self.do_concat = pe_do_concat
         self.do_semantic_position = do_semantic_position
+        self.use_patch = use_patch
+        self.patch_encodings = {}
         for layer_name in self.layer_dict.keys() :
             res, dim = self.layer_dict[layer_name]
 
@@ -127,13 +154,29 @@ class AllPositionalEmbedding(nn.Module):
             elif self.do_semantic_position :
                 self.positional_encodings[layer_name] = SinglePositional_Semantic_Embedding(max_len = res*res, d_model = dim)
 
+            elif self.use_patch :
+                for patch_index in range(patch_num) :
+                    self.positional_encodings[layer_name, patch_index] = SinglePositional_Patch_Embedding(max_len=res * res, d_model=dim)
+
             else :
                 self.positional_encodings[layer_name] = SinglePositionalEmbedding(max_len = res*res, d_model = dim)
 
-    def forward(self, x: torch.Tensor, layer_name):
+
+
+    def forward(self,
+                x: torch.Tensor,
+                layer_name,
+                patch_idx=None):
+
+
         if layer_name in self.positional_encodings.keys() :
-            position_embedder = self.positional_encodings[layer_name]
-            output = position_embedder(x)
+            if self.use_patch :
+                patch_embedding = self.positional_encodings[layer_name, patch_idx]
+                output = patch_embedding(x)
+            else :
+                position_embedder = self.positional_encodings[layer_name]
+                output = position_embedder(x)
+
             return output
         else :
             return x

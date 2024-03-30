@@ -12,7 +12,7 @@ port_number=51244
 category="medical"
 obj_name="brain"
 trigger_word="brain"
-benchmark="BraTS2020_Segmentation_128"
+benchmark="BraTS2020_Segmentation_256"
 layer_name='layer_3'
 sub_folder="up_16_32_64"
 file_name="patch_test"
@@ -34,6 +34,7 @@ accelerate launch --config_file ../../../gpu_config/gpu_0_config \
  --use_position_embedder \
  --aggregation_model_c \
  --n_classes 4 \
- --mask_res 64 \
+ --mask_res 256 \
+ --patch_size 64 \
  --use_batchnorm \
  --use_patch

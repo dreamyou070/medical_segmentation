@@ -79,7 +79,8 @@ class TrainDataset_Seg(Dataset):
                  n_classes: int = 4,
                  single_modality = False,
                  mask_res = 128,
-                 use_patch = False):
+                 use_patch = False,
+                 patch_size = 64,):
 
         # [1] base image
         self.root_dir = root_dir
@@ -87,10 +88,8 @@ class TrainDataset_Seg(Dataset):
         folders = os.listdir(self.root_dir)
         for folder in folders :
             folder_dir = os.path.join(self.root_dir, folder)
-            #rgb_folder = os.path.join(folder_dir, f'image_{mask_res}')
-            #gt_folder = os.path.join(folder_dir, f'mask_{mask_res}') # [128,128]
-            rgb_folder = os.path.join(folder_dir, f'image_128')
-            gt_folder = os.path.join(folder_dir, f'mask_128') # [128,128]
+            rgb_folder = os.path.join(folder_dir, f'image_{mask_res}')
+            gt_folder = os.path.join(folder_dir, f'mask_{mask_res}') # [128,128]
             files = os.listdir(rgb_folder)
             for file in files:
                 name, ext = os.path.splitext(file)
@@ -109,6 +108,8 @@ class TrainDataset_Seg(Dataset):
         self.single_modality = single_modality
         self.mask_res = mask_res
         self.use_patch = use_patch
+        self.patch_size = patch_size
+        self.patch_num = (mask_res // patch_size) ** 2
 
     def __len__(self):
         return len(self.image_paths)
@@ -152,13 +153,13 @@ class TrainDataset_Seg(Dataset):
 
         if self.use_patch :
             H, W = gt_arr.shape
-            patch_size = 64
-            patch_num_h = (H // patch_size)
-            patch_num_w = (W // patch_size)
+
+            patch_num_h = (H // self.patch_size)
+            patch_num_w = (W // self.patch_size)
             patches, cat_patches = [], []
             for i in range(patch_num_h):
                 for j in range(patch_num_w):
-                    patch = gt_arr[i * patch_size:(i + 1) * patch_size, j * patch_size:(j + 1) * patch_size]  # [64,64]
+                    patch = gt_arr[i * self.patch_size:(i + 1) * self.patch_size, j * self.patch_size:(j + 1) * self.patch_size]  # [64,64]
                     patches.append(torch.tensor(patch).flatten())  # [64*64]
                     cat_patch = to_categorical(patch, num_classes=4)  # [64,64,4]
                     cat_patch = torch.tensor(cat_patch).permute(2, 0, 1)  # [4,64,64]
@@ -170,7 +171,7 @@ class TrainDataset_Seg(Dataset):
             image_patches = []
             for i in range(patch_num_h):
                 for j in range(patch_num_w):
-                    patch = img[i * patch_size:(i + 1) * patch_size, j * patch_size:(j + 1) * patch_size]
+                    patch = img[i * self.patch_size:(i + 1) * self.patch_size, j * self.patch_size:(j + 1) * self.patch_size]
                     patch_pil = Image.fromarray(patch).resize((512, 512), Image.BICUBIC)
                     patch = np.array(patch_pil)
                     image_patches.append(self.transform(patch))
