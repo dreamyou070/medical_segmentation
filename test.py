@@ -168,7 +168,7 @@ def main(args):
                             encoder_hidden_states = encoder_hidden_states[:, :2, :]
                         # [2.3] Unet
                         unet(latents, 0, encoder_hidden_states, trg_layer_list=args.trg_layer_list, noise_type=position_embedder)
-                        query_dict, key_dict, attn_dict = controller.query_dict, controller.key_dict, controller.attn_dict
+                        query_dict, key_dict = controller.query_dict, controller.key_dict
                         controller.reset()
                         q_dict = {}
                         for layer in args.trg_layer_list:
