@@ -21,6 +21,8 @@ from model.pe import AllPositionalEmbedding
 from safetensors.torch import load_file
 from monai.utils import DiceCEReduction, LossReduction, Weight, deprecated_arg, look_up_option, pytorch_after
 
+""" tommorrow think about loss function """
+
 def main(args):
 
     print(f'\n step 1. setting')
@@ -151,6 +153,16 @@ def main(args):
             gt = batch['gt'].to(dtype=weight_dtype)                                         # 1,3,256,256
             gt = gt.permute(0, 2, 3, 1).contiguous()#.view(-1, gt.shape[-1]).contiguous()   # 1,256,256,3
             gt = gt.view(-1, gt.shape[-1]).contiguous()
+
+            if args.use_patch :
+                patch_num = image.shape[1]
+                for i in range(patch_num):
+                    image = batch['image'][:,i,:,:,:]
+                    gt_flat = batch['gt_flat'][:,i,:]
+                    gt = batch['gt'][:,i,:,:,:].to(dtype=weight_dtype)  # 1,3,256,256
+                    gt = gt.permute(0, 2, 3, 1).contiguous()  # .view(-1, gt.shape[-1]).contiguous()   # 1,256,256,3
+                    gt = gt.view(-1, gt.shape[-1]).contiguous()
+
             with torch.no_grad():
                 # how does it do ?
                 latents = vae.encode(image).latent_dist.sample() * args.vae_scale_factor
@@ -355,6 +367,7 @@ if __name__ == "__main__":
     parser.add_argument("--do_semantic_position", action='store_true')
     parser.add_argument("--use_init_query", action='store_true')
     parser.add_argument("--use_dice_loss", action='store_true')
+    parser.add_argument("--use_patch", action='store_true')
     args = parser.parse_args()
     unet_passing_argument(args)
     passing_argument(args)
