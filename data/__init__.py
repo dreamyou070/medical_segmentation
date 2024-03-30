@@ -15,14 +15,16 @@ def call_dataset(args) :
                                      caption=args.trigger_word,
                                      latent_res=args.latent_res,
                                      n_classes = args.n_classes,
-                                     mask_res = args.mask_res,)
+                                     mask_res = args.mask_res,
+                                     use_patch = args.use_patch,)
     test_dataset = TrainDataset_Seg(root_dir=args.test_data_path,
                                     resize_shape=[args.resize_shape,args.resize_shape],
                                     tokenizer=tokenizer,
                                     caption=args.trigger_word,
                                     latent_res=args.latent_res,
                                     n_classes=args.n_classes,
-                                    mask_res = args.mask_res,)
+                                    mask_res = args.mask_res,
+                                    use_patch = args.use_patch,)
     train_dataloader = torch.utils.data.DataLoader(train_dataset,
                                                    batch_size=args.batch_size,
                                                    shuffle=True)
