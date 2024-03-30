@@ -407,6 +407,7 @@ if __name__ == "__main__":
     parser.add_argument("--use_data_aug", action='store_true')
     parser.add_argument("--deactivating_loss", action='store_true')
     parser.add_argument("--use_dice_ce_loss", action='store_true')
+    parser.add_argument("--dice_weight", type=float, default=1)
     args = parser.parse_args()
     unet_passing_argument(args)
     passing_argument(args)
