@@ -18,7 +18,7 @@ def main() :
     class_weight = compute_class_weight(class_weight="balanced", classes=np.unique(all_values), y=all_values)
     category = 'brain'
     np.save(f'class_weight_{category}.npy', class_weight)
-    
+
 
 
 if __name__ == '__main__':
