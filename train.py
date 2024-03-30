@@ -108,9 +108,10 @@ def main(args):
                          batch=False,
                          weight=None)
     loss_dicece = DiceCELoss(to_onehot_y=True,
-                           softmax=True,
-                           squared_pred=True, smooth_nr=args.smooth_nr,
-                           smooth_dr=args.smooth_dr)
+                             softmax=True,
+                             squared_pred=True,
+                             smooth_nr=1e-5,
+                             smooth_dr=1e-5)
 
     print(f'\n step 8. model to device')
     if args.use_position_embedder :
