@@ -13,7 +13,7 @@ accelerate launch --config_file ../../../gpu_config/gpu_0_config \
  --pretrained_model_name_or_path ../../../pretrained_stable_diffusion/stable-diffusion-v1-5/v1-5-pruned.safetensors \
  --network_dim 64 --network_alpha 4 \
  --data_path "/home/dreamyou070/MyData/anomaly_detection/${category}/${obj_name}/${benchmark}/test" \
- --network_folder "../../result/${category}/${obj_name}/${benchmark}/${layer_name}/${sub_folder}/${file_name}/model" \
+ --network_folder "../../result/${category}/${obj_name}/${benchmark}/${sub_folder}/${file_name}/model" \
  --obj_name "${obj_name}" \
  --prompt "${trigger_word}" \
  --latent_res 64 \
