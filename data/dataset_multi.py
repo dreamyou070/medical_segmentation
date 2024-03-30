@@ -78,9 +78,7 @@ class TrainDataset_Seg(Dataset):
                  latent_res: int = 64,
                  n_classes: int = 4,
                  single_modality = False,
-                 mask_res = 128,
-                 use_patch = False,
-                 patch_size = 64,):
+                 mask_res = 128,):
 
         # [1] base image
         self.root_dir = root_dir
@@ -107,9 +105,6 @@ class TrainDataset_Seg(Dataset):
         self.n_classes = n_classes
         self.single_modality = single_modality
         self.mask_res = mask_res
-        self.use_patch = use_patch
-        self.patch_size = patch_size
-        self.patch_num = (mask_res // patch_size) ** 2
 
     def __len__(self):
         return len(self.image_paths)
@@ -151,44 +146,17 @@ class TrainDataset_Seg(Dataset):
         if self.caption == 'brain':
             gt_arr = np.where(gt_arr==4, 3, gt_arr)
 
-        if self.use_patch :
-            H, W = gt_arr.shape
-            patch_num_h = (H // self.patch_size)
-            patch_num_w = (W // self.patch_size)
-            patches, cat_patches = [], []
-            for i in range(patch_num_h):
-                for j in range(patch_num_w):
-                    patch = gt_arr[i * self.patch_size : (i + 1) * self.patch_size,
-                                   j * self.patch_size : (j + 1) * self.patch_size]  # [64,64]
-                    patches.append(torch.tensor(patch).flatten())  # [64*64]
-                    cat_patch = to_categorical(patch, num_classes=4)  # [64,64,4]
-                    cat_patch = torch.tensor(cat_patch).permute(2, 0, 1)  # [4,64,64]
-                    cat_patches.append(cat_patch)
-            gt_flat = torch.stack(patches)  # patch_num,64*64
-            gt = torch.stack(cat_patches)   # patch_num,4,64,64
-
-            # [4] patch image
-            image_patches = []
-            for i in range(patch_num_h):
-                for j in range(patch_num_w):
-                    patch = img[i * self.patch_size:(i + 1) * self.patch_size, j * self.patch_size:(j + 1) * self.patch_size]
-                    patch_pil = Image.fromarray(patch).resize((512, 512), Image.BICUBIC)
-                    patch = np.array(patch_pil)
-                    image_patches.append(self.transform(patch))
-            img = torch.stack(image_patches)
-
-        else :
-            img = self.transform(img)
-            gt_arr_ = to_categorical(gt_arr)
-            class_num = gt_arr_.shape[-1]
-            gt = np.zeros((self.mask_res,   # 256
-                           self.mask_res,   # 256
-                           self.n_classes)) # 3
-            # 256,256,3
-            gt[:,:,:class_num] = gt_arr_
-            gt = torch.tensor(gt).permute(2,0,1)        # 3,256,256
-            # [3] gt flatten
-            gt_flat = gt_arr.flatten() # 128*128
+        img = self.transform(img)
+        gt_arr_ = to_categorical(gt_arr)
+        class_num = gt_arr_.shape[-1]
+        gt = np.zeros((self.mask_res,   # 256
+                       self.mask_res,   # 256
+                       self.n_classes)) # 3
+        # 256,256,3
+        gt[:,:,:class_num] = gt_arr_
+        gt = torch.tensor(gt).permute(2,0,1)        # 3,256,256
+        # [3] gt flatten
+        gt_flat = gt_arr.flatten() # 128*128
 
         # [3] caption
         input_ids, attention_mask = self.get_input_ids(self.caption)  # input_ids = [77]
