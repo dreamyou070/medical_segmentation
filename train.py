@@ -400,6 +400,7 @@ if __name__ == "__main__":
     parser.add_argument("--use_monai_focal_loss", action='store_true')
     parser.add_argument("--use_data_aug", action='store_true')
     parser.add_argument("--deactivating_loss", action='store_true')
+    parser.add_argument("--use_dice_ce_loss", action='store_true')
     args = parser.parse_args()
     unet_passing_argument(args)
     passing_argument(args)
