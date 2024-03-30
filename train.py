@@ -228,6 +228,7 @@ def main(args):
                         deactivating_loss.append(loss.sum())
                     deactivating_loss = torch.stack(deactivating_loss).sum()
                     loss += deactivating_loss
+                loss = loss.mean()
 
             loss = loss.to(weight_dtype)
             current_loss = loss.detach().item()
