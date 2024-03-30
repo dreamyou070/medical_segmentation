@@ -139,7 +139,7 @@ def main(args):
             save_base_folder = os.path.join(check_base_folder, anomal_folder)
             os.makedirs(save_base_folder, exist_ok=True)
             anomal_folder_dir = os.path.join(test_img_folder, anomal_folder)
-            rgb_folder = os.path.join(anomal_folder_dir, 'image_128')
+            rgb_folder = os.path.join(anomal_folder_dir, 'image_256')
             gt_folder = os.path.join(anomal_folder_dir, 'mask_128')
             rgb_imgs = os.listdir(rgb_folder)
 

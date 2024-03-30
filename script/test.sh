@@ -3,10 +3,10 @@
 port_number=50042
 category="medical"
 obj_name="brain"
-benchmark="BraTS2020_Segmentation_128"
+benchmark="BraTS2020_Segmentation_256"
 layer_name='layer_3'
 sub_folder="up_16_32_64"
-file_name="4_absolute_pe_segmentation_model_c_cross_focal_use_batch_norm_query"
+file_name="1_new_data_absolute_pe_segmentation_model_c_use_dice_ce_loss"
 
 accelerate launch --config_file ../../../gpu_config/gpu_0_config \
  --main_process_port $port_number ../test.py \
