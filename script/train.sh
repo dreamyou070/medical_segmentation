@@ -6,14 +6,14 @@
 # 4_absolute_pe_segmentation_model_c_cross_focal_use_batch_norm_query
 # 6_absolute_pe_segmentation_model_b_cross_focal_use_batch_norm_query
 
-port_number=51251
+port_number=51252
 category="medical"
 obj_name="abdomen"
 trigger_word="abdomen"
 benchmark="abdomen_256"
 layer_name='layer_3'
 sub_folder="up_16_32_64"
-file_name="1_new_data_absolute_pe_segmentation_model_c_use_dice_ce_loss"
+file_name="2_new_data_absolute_pe_segmentation_model_c_cross_monai_focal_loss"
 # --use_instance_norm
 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_3_4_5_config \
  --main_process_port $port_number ../train.py --log_with wandb \
@@ -33,4 +33,4 @@ accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_3_4_5_config \
  --n_classes 14 \
  --mask_res 256 \
  --use_batchnorm \
- --use_dice_ce_loss
+ --use_monai_focal_loss
