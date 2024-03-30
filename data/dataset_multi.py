@@ -173,10 +173,11 @@ class TrainDataset_Seg(Dataset):
                     patch = img[i * patch_size:(i + 1) * patch_size, j * patch_size:(j + 1) * patch_size]
                     patch_pil = Image.fromarray(patch).resize((512, 512), Image.BICUBIC)
                     patch = np.array(patch_pil)
-                    image_patches.append(patch)
-            img = np.array(image_patches)
+                    image_patches.append(self.transform(patch))
+            img = torch.stach(image_patches)
 
         else :
+            img = self.transform(img)
             gt_arr_ = to_categorical(gt_arr)
             class_num = gt_arr_.shape[-1]
             gt = np.zeros((self.mask_res,   # 256
@@ -191,7 +192,7 @@ class TrainDataset_Seg(Dataset):
         # [3] caption
         input_ids, attention_mask = self.get_input_ids(self.caption)  # input_ids = [77]
 
-        return {'image': self.transform(img),  # [3,512,512]
+        return {'image': img,  # [3,512,512]
                 "gt": gt,                      # [3,256,256]
                 "gt_flat" : gt_flat,           # [128*128]
                 "input_ids": input_ids,}
