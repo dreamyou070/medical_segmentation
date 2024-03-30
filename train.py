@@ -160,65 +160,30 @@ def main(args):
             with torch.set_grad_enabled(True):
                 encoder_hidden_states = text_encoder(batch["input_ids"].to(device))["last_hidden_state"]
 
-            if args.use_patch :
-                patch_num = image.shape[1]
-                for i in range(patch_num):
-                    patch_idx = i
-                    image = batch['image'][:,i,:,:,:]
-                    gt_flat = batch['gt_flat'][:,i,:]
-                    gt = batch['gt'][:,i,:,:,:].to(dtype=weight_dtype)  # 1,3,256,256
-                    gt = gt.permute(0, 2, 3, 1).contiguous()  # .view(-1, gt.shape[-1]).contiguous()   # 1,256,256,3
-                    gt = gt.view(-1, gt.shape[-1]).contiguous()
-
-                    with torch.no_grad():
-                        # how does it do ?
-                        latents = vae.encode(image).latent_dist.sample() * args.vae_scale_factor
-                    with torch.set_grad_enabled(True):
-                        unet(latents,
-                             0,
-                             encoder_hidden_states,
-                             trg_layer_list=args.trg_layer_list,
-                             noise_type=[position_embedder, patch_idx])
-                    query_dict, key_dict = controller.query_dict, controller.key_dict
-                    controller.reset()
-                    q_dict = {}
-                    for layer in args.trg_layer_list:
-                        query = query_dict[layer][0].squeeze()  # head, pix_num, dim
-                        res = int(query.shape[1] ** 0.5)
-                        q_dict[res] = reshape_batch_dim_to_heads(query)  # 1, res,res,dim
-                    x16_out, x32_out, x64_out = q_dict[16], q_dict[32], q_dict[64]
-                    if not args.use_init_query:
-                        masks_pred = segmentation_head(x16_out, x32_out, x64_out)  # 1,4,128,128
-                    else:
-                        masks_pred = segmentation_head(x16_out, x32_out, x64_out, x_init=latents)  # 1,4,128,128
-                    masks_pred_ = masks_pred.permute(0, 2, 3, 1).contiguous()  # 1,128,128,4 # mask_pred_ = [1,4,512,512]
-                    masks_pred_ = masks_pred_.view(-1, masks_pred_.shape[-1]).contiguous()
-
+            image = batch['image'].to(dtype=weight_dtype)  # 1,3,512,512
+            gt_flat = batch['gt_flat'].to(dtype=weight_dtype)  # 1,128*128
+            gt = batch['gt'].to(dtype=weight_dtype)  # 1,3,256,256
+            gt = gt.permute(0, 2, 3, 1).contiguous()  # .view(-1, gt.shape[-1]).contiguous()   # 1,256,256,3
+            gt = gt.view(-1, gt.shape[-1]).contiguous()
+            with torch.no_grad():
+                # how does it do ?
+                latents = vae.encode(image).latent_dist.sample() * args.vae_scale_factor
+            with torch.set_grad_enabled(True):
+                unet(latents, 0, encoder_hidden_states, trg_layer_list=args.trg_layer_list, noise_type=position_embedder)
+            query_dict, key_dict = controller.query_dict, controller.key_dict
+            controller.reset()
+            q_dict = {}
+            for layer in args.trg_layer_list:
+                query = query_dict[layer][0].squeeze()  # head, pix_num, dim
+                res = int(query.shape[1] ** 0.5)
+                q_dict[res] = reshape_batch_dim_to_heads(query) # 1, res,res,dim
+            x16_out, x32_out, x64_out = q_dict[16], q_dict[32], q_dict[64]
+            if not args.use_init_query  :
+                masks_pred = segmentation_head(x16_out, x32_out, x64_out) # 1,4,128,128
             else :
-                image = batch['image'].to(dtype=weight_dtype)  # 1,3,512,512
-                gt_flat = batch['gt_flat'].to(dtype=weight_dtype)  # 1,128*128
-                gt = batch['gt'].to(dtype=weight_dtype)  # 1,3,256,256
-                gt = gt.permute(0, 2, 3, 1).contiguous()  # .view(-1, gt.shape[-1]).contiguous()   # 1,256,256,3
-                gt = gt.view(-1, gt.shape[-1]).contiguous()
-                with torch.no_grad():
-                    # how does it do ?
-                    latents = vae.encode(image).latent_dist.sample() * args.vae_scale_factor
-                with torch.set_grad_enabled(True):
-                    unet(latents, 0, encoder_hidden_states, trg_layer_list=args.trg_layer_list, noise_type=position_embedder)
-                query_dict, key_dict = controller.query_dict, controller.key_dict
-                controller.reset()
-                q_dict = {}
-                for layer in args.trg_layer_list:
-                    query = query_dict[layer][0].squeeze()  # head, pix_num, dim
-                    res = int(query.shape[1] ** 0.5)
-                    q_dict[res] = reshape_batch_dim_to_heads(query) # 1, res,res,dim
-                x16_out, x32_out, x64_out = q_dict[16], q_dict[32], q_dict[64]
-                if not args.use_init_query  :
-                    masks_pred = segmentation_head(x16_out, x32_out, x64_out) # 1,4,128,128
-                else :
-                    masks_pred = segmentation_head(x16_out, x32_out, x64_out, x_init = latents) # 1,4,128,128
-                masks_pred_ = masks_pred.permute(0, 2, 3, 1).contiguous() # 1,128,128,4 # mask_pred_ = [1,4,512,512]
-                masks_pred_ = masks_pred_.view(-1, masks_pred_.shape[-1]).contiguous()
+                masks_pred = segmentation_head(x16_out, x32_out, x64_out, x_init = latents) # 1,4,128,128
+            masks_pred_ = masks_pred.permute(0, 2, 3, 1).contiguous() # 1,128,128,4 # mask_pred_ = [1,4,512,512]
+            masks_pred_ = masks_pred_.view(-1, masks_pred_.shape[-1]).contiguous()
 
 
             # [5.1] Multiclassification Loss
@@ -235,6 +200,32 @@ def main(args):
                 dice_loss = loss_Dice(masks_pred, gt)
                 loss += dice_loss
                 loss_dict['dice_loss'] = dice_loss.item()
+
+            # [5.4] Deactivating Loss
+            # masks_pred = Batch, Class_num, H, W
+            if args.deactivating_loss :
+                """ background have not many to train """
+                deactivating_loss = []
+                pred_prob = torch.softmax(masks_pred, dim=1)
+                pred_prob = pred_prob.permute(0, 2, 3, 1).contiguous()  # 1,128,128,4
+                gt = batch['gt'].to(dtype=weight_dtype)  # 1,3,256,256
+                gt = gt.permute(0, 2, 3, 1).contiguous()  # .view(-1, gt.shape[-1]).contiguous()   # 1,256,256,3
+                for i in range(args.n_classes):
+                    prob_map = pred_prob[..., i]  # 1,128,128
+                    gt_map = (1-gt[..., i])  # 1,128,128
+                    loss = (prob_map * gt_map)/gt_map.sum()
+                    deactivating_loss.append(loss.sum())
+                deactivating_loss = torch.stack(deactivating_loss).sum()
+                loss += deactivating_loss
+
+
+
+
+
+
+
+
+
 
             loss = loss.to(weight_dtype)
             current_loss = loss.detach().item()
@@ -407,6 +398,7 @@ if __name__ == "__main__":
     parser.add_argument("--use_patch", action='store_true')
     parser.add_argument("--use_monai_focal_loss", action='store_true')
     parser.add_argument("--use_data_aug", action='store_true')
+    parser.add_argument("--deactivating_loss", action='store_true')
     args = parser.parse_args()
     unet_passing_argument(args)
     passing_argument(args)

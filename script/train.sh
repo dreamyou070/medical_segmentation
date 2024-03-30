@@ -6,14 +6,14 @@
 # 4_absolute_pe_segmentation_model_c_cross_focal_use_batch_norm_query
 # 6_absolute_pe_segmentation_model_b_cross_focal_use_batch_norm_query
 
-port_number=51244
+port_number=51245
 category="medical"
 obj_name="brain"
 trigger_word="brain"
 benchmark="BraTS2020_Segmentation_256"
 layer_name='layer_3'
 sub_folder="up_16_32_64"
-file_name="4_absolute_pe_segmentation_model_c_cross_backgroud_non_focal_use_batch_norm_query_data_aug"
+file_name="5_absolute_pe_segmentation_model_c_cross_backgroud_non_focal_use_batch_norm_query_deactivating_loss"
 # --use_instance_norm
 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_3_4_5_config \
  --main_process_port $port_number ../train.py --log_with wandb \
@@ -35,4 +35,4 @@ accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_3_4_5_config \
  --mask_res 256 \
  --use_batchnorm \
  --use_monai_focal_loss \
- --use_data_aug
+ --deactivating_loss
