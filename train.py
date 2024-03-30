@@ -153,6 +153,7 @@ def main(args):
                 encoder_hidden_states = text_encoder(batch["input_ids"].to(device))["last_hidden_state"]
 
             if args.use_patch :
+                total_loss = []
                 for i in range(patch_num):
                     patch_idx = i
                     image = batch['image'][:,i,:,:,:]
@@ -185,6 +186,23 @@ def main(args):
                     masks_pred_ = masks_pred.permute(0, 2, 3, 1).contiguous()  # 1,128,128,4 # mask_pred_ = [1,4,512,512]
                     masks_pred_ = masks_pred_.view(-1, masks_pred_.shape[-1]).contiguous()
 
+                    # [5.1] Multiclassification Loss
+                    loss = loss_CE(masks_pred_, gt_flat.squeeze().to(torch.long))  # 128*128
+                    loss_dict['cross_entropy_loss'] = loss.item()
+
+                    # [5.2] Focal Loss
+                    focal_loss = loss_FC(masks_pred_, gt_flat.squeeze().to(masks_pred.device))  # N
+                    loss += focal_loss
+                    loss_dict['focal_loss'] = focal_loss.item()
+
+                    # [5.3] Dice Loss
+                    if args.use_dice_loss:
+                        dice_loss = loss_Dice(masks_pred, gt)
+                        loss += dice_loss
+                        loss_dict['dice_loss'] = dice_loss.item()
+                    total_loss.append(loss)
+                loss = sum(total_loss) / len(total_loss)
+
             else :
                 image = batch['image'].to(dtype=weight_dtype)  # 1,3,512,512
                 gt_flat = batch['gt_flat'].to(dtype=weight_dtype)  # 1,128*128
@@ -211,21 +229,20 @@ def main(args):
                 masks_pred_ = masks_pred.permute(0, 2, 3, 1).contiguous() # 1,128,128,4 # mask_pred_ = [1,4,512,512]
                 masks_pred_ = masks_pred_.view(-1, masks_pred_.shape[-1]).contiguous()
 
+                # [5.1] Multiclassification Loss
+                loss = loss_CE(masks_pred_,  gt_flat.squeeze().to(torch.long))  # 128*128
+                loss_dict['cross_entropy_loss'] = loss.item()
 
-            # [5.1] Multiclassification Loss
-            loss = loss_CE(masks_pred_,  gt_flat.squeeze().to(torch.long))  # 128*128
-            loss_dict['cross_entropy_loss'] = loss.item()
+                # [5.2] Focal Loss
+                focal_loss = loss_FC(masks_pred_,gt_flat.squeeze().to(masks_pred.device))  # N
+                loss += focal_loss
+                loss_dict['focal_loss'] = focal_loss.item()
 
-            # [5.2] Focal Loss
-            focal_loss = loss_FC(masks_pred_,gt_flat.squeeze().to(masks_pred.device))  # N
-            loss += focal_loss
-            loss_dict['focal_loss'] = focal_loss.item()
-
-            # [5.3] Dice Loss
-            if args.use_dice_loss:
-                dice_loss = loss_Dice(masks_pred, gt)
-                loss += dice_loss
-                loss_dict['dice_loss'] = dice_loss.item()
+                # [5.3] Dice Loss
+                if args.use_dice_loss:
+                    dice_loss = loss_Dice(masks_pred, gt)
+                    loss += dice_loss
+                    loss_dict['dice_loss'] = dice_loss.item()
 
             loss = loss.to(weight_dtype)
             current_loss = loss.detach().item()

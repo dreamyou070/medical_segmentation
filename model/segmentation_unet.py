@@ -117,9 +117,13 @@ class Segmentation_Head_a(nn.Module):
 
         self.up1 = Up(1280, 640 // factor, bilinear, use_batchnorm, use_instance_norm)
         self.up2 = Up(640, 320 // factor, bilinear, use_batchnorm, use_instance_norm)
-        self.up3 = Up_conv(in_channels = 320,
-                            out_channels = 160,
-                            kernel_size=2) # 64 -> 128 , channel 320 -> 160
+
+        if self.mask_res == 64 :
+            self.up3 = nn.Conv2d(320, 160, kernel_size=3, padding=1, bias=False)
+        if self.mask_res == 128:
+            self.up3 = Up_conv(in_channels = 320,
+                                out_channels = 160,
+                                kernel_size=2) # 64 -> 128 , channel 320 -> 160
         if self.mask_res == 256 :
             self.up4 = Up_conv(in_channels = 160,
                                 out_channels = 160,
