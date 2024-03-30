@@ -32,7 +32,7 @@ accelerate launch --config_file ../../../gpu_config/gpu_0_config \
                     'up_blocks_2_attentions_2_transformer_blocks_0_attn2',
                     'up_blocks_3_attentions_2_transformer_blocks_0_attn2',]" \
  --use_position_embedder \
- --aggregation_model_c \
+ --aggregation_model_a \
  --n_classes 4 \
  --mask_res 256 \
  --patch_size 64 \

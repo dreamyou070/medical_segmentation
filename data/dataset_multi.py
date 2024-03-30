@@ -153,19 +153,19 @@ class TrainDataset_Seg(Dataset):
 
         if self.use_patch :
             H, W = gt_arr.shape
-
             patch_num_h = (H // self.patch_size)
             patch_num_w = (W // self.patch_size)
             patches, cat_patches = [], []
             for i in range(patch_num_h):
                 for j in range(patch_num_w):
-                    patch = gt_arr[i * self.patch_size:(i + 1) * self.patch_size, j * self.patch_size:(j + 1) * self.patch_size]  # [64,64]
+                    patch = gt_arr[i * self.patch_size : (i + 1) * self.patch_size,
+                                   j * self.patch_size : (j + 1) * self.patch_size]  # [64,64]
                     patches.append(torch.tensor(patch).flatten())  # [64*64]
                     cat_patch = to_categorical(patch, num_classes=4)  # [64,64,4]
                     cat_patch = torch.tensor(cat_patch).permute(2, 0, 1)  # [4,64,64]
                     cat_patches.append(cat_patch)
             gt_flat = torch.stack(patches)  # patch_num,64*64
-            gt = torch.stack(cat_patches)  # patch_num,4,64,64
+            gt = torch.stack(cat_patches)   # patch_num,4,64,64
 
             # [4] patch image
             image_patches = []
