@@ -71,11 +71,10 @@ def main():
             test_mask_128_path = os.path.join(test_folder_128_mask, f'{name}.npy')
             test_mask_256_path = os.path.join(test_folder_256_mask, f'{name}.npy')
 
-            print(f'copy {image_128_path} to test {test_image_128_path}')
-            #os.rename(image_128_path, test_image_128_path)
-            #os.rename(image_256_path, test_image_256_path)
-            #os.rename(mask_128_path, test_mask_128_path)
-            #os.rename(mask_256_path, test_mask_256_path)
+            os.rename(image_128_path, test_image_128_path)
+            os.rename(image_256_path, test_image_256_path)
+            os.rename(mask_128_path, test_mask_128_path)
+            os.rename(mask_256_path, test_mask_256_path)
 
 
 
