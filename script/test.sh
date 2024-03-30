@@ -7,7 +7,8 @@ benchmark="BraTS2020_Segmentation_256"
 layer_name='layer_3'
 sub_folder="up_16_32_64"
 file_name="1_new_data_absolute_pe_segmentation_model_c_use_dice_ce_loss"
-
+# --use_position_embedder \
+#
 accelerate launch --config_file ../../../gpu_config/gpu_0_config \
  --main_process_port $port_number ../test.py \
  --pretrained_model_name_or_path ../../../pretrained_stable_diffusion/stable-diffusion-v1-5/v1-5-pruned.safetensors \
@@ -20,7 +21,6 @@ accelerate launch --config_file ../../../gpu_config/gpu_0_config \
  --trg_layer_list "['up_blocks_1_attentions_2_transformer_blocks_0_attn2',
                     'up_blocks_2_attentions_2_transformer_blocks_0_attn2',
                     'up_blocks_3_attentions_2_transformer_blocks_0_attn2',]" \
- --use_position_embedder \
  --aggregation_model_c \
  --n_classes 4 \
  --mask_res 128 \
