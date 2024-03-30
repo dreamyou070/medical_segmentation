@@ -47,7 +47,8 @@ def main(args):
     text_encoder, vae, unet, _ = load_target_model(args, weight_dtype, accelerator)
     print(f' (2.2) position embedder')
     if args.use_position_embedder:
-        position_embedder = AllPositionalEmbedding(pe_do_concat=args.pe_do_concat)
+        position_embedder = AllPositionalEmbedding(pe_do_concat=args.pe_do_concat,
+                                                   do_semantic_position = args.do_semantic_position)
     print(f' (2.3) segmentation head')
     if args.aggregation_model_a:
         segmentation_head_class = Segmentation_Head_a
@@ -246,7 +247,7 @@ if __name__ == '__main__':
     parser.add_argument("--single_layer", action='store_true')
     parser.add_argument("--use_noise_scheduler", action='store_true')
     parser.add_argument('--min_timestep', type=int, default=0)
-    parser.add_argument('--max_timestep', type=int, default=500)
+    parser.add_argument("--do_semantic_position", action='store_true')
     # step 8. test
     import ast
     def arg_as_list(arg):
