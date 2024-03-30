@@ -94,7 +94,7 @@ def main(args):
                             reduction=LossReduction.MEAN,
                             use_softmax=True)
 
-    from monai.losses import DiceLoss
+    from monai.losses import DiceLoss, DiceCELoss
     loss_Dice = DiceLoss(include_background=False,
                          to_onehot_y=False,
                          sigmoid=False,
@@ -107,6 +107,10 @@ def main(args):
                          smooth_dr=1e-5,
                          batch=False,
                          weight=None)
+    loss_dicece = DiceCELoss(to_onehot_y=True,
+                           softmax=True,
+                           squared_pred=True, smooth_nr=args.smooth_nr,
+                           smooth_dr=args.smooth_dr)
 
     print(f'\n step 8. model to device')
     if args.use_position_embedder :
@@ -185,39 +189,44 @@ def main(args):
             masks_pred_ = masks_pred.permute(0, 2, 3, 1).contiguous() # 1,128,128,4 # mask_pred_ = [1,4,512,512]
             masks_pred_ = masks_pred_.view(-1, masks_pred_.shape[-1]).contiguous()
 
+            if args.use_dice_ce_loss :
+                loss = loss_dicece(input=masks_pred,
+                                   target=batch['gt'].to(dtype=weight_dtype))
+            else :
+                # [5.1] Multiclassification Loss
+                loss = loss_CE(masks_pred_,  gt_flat.squeeze().to(torch.long))  # 128*128
+                loss_dict['cross_entropy_loss'] = loss.item()
 
-            # [5.1] Multiclassification Loss
-            loss = loss_CE(masks_pred_,  gt_flat.squeeze().to(torch.long))  # 128*128
-            loss_dict['cross_entropy_loss'] = loss.item()
+                # [5.2] Focal Loss
+                focal_loss = loss_FC(masks_pred_,gt_flat.squeeze().to(masks_pred.device))  # N
+                if args.use_monai_focal_loss:
+                    focal_loss = focal_loss.mean()
+                loss += focal_loss
+                loss_dict['focal_loss'] = focal_loss.item()
 
-            # [5.2] Focal Loss
-            focal_loss = loss_FC(masks_pred_,gt_flat.squeeze().to(masks_pred.device))  # N
-            loss += focal_loss
-            loss_dict['focal_loss'] = focal_loss.item()
+                # [5.3] Dice Loss
+                if args.use_dice_loss:
+                    dice_loss = loss_Dice(masks_pred, gt)
+                    loss += dice_loss
+                    loss_dict['dice_loss'] = dice_loss.item()
 
-            # [5.3] Dice Loss
-            if args.use_dice_loss:
-                dice_loss = loss_Dice(masks_pred, gt)
-                loss += dice_loss
-                loss_dict['dice_loss'] = dice_loss.item()
-
-            # [5.4] Deactivating Loss
-            # masks_pred = Batch, Class_num, H, W
-            if args.deactivating_loss :
-                eps = 1e-15
-                """ background have not many to train """
-                deactivating_loss = []
-                pred_prob = torch.softmax(masks_pred, dim=1)
-                pred_prob = pred_prob.permute(0, 2, 3, 1).contiguous()  # 1,128,128,4
-                gt = batch['gt'].to(dtype=weight_dtype)  # 1,3,256,256
-                gt = gt.permute(0, 2, 3, 1).contiguous()  # .view(-1, gt.shape[-1]).contiguous()   # 1,256,256,3
-                for i in range(args.n_classes):
-                    prob_map = pred_prob[..., i]  # 1,128,128
-                    gt_map = (1-gt[..., i])  # 1,128,128
-                    loss = (prob_map * gt_map)/(gt_map.sum()+eps)
-                    deactivating_loss.append(loss.sum())
-                deactivating_loss = torch.stack(deactivating_loss).sum()
-                loss += deactivating_loss
+                # [5.4] Deactivating Loss
+                # masks_pred = Batch, Class_num, H, W
+                if args.deactivating_loss :
+                    eps = 1e-15
+                    """ background have not many to train """
+                    deactivating_loss = []
+                    pred_prob = torch.softmax(masks_pred, dim=1)
+                    pred_prob = pred_prob.permute(0, 2, 3, 1).contiguous()  # 1,128,128,4
+                    gt = batch['gt'].to(dtype=weight_dtype)  # 1,3,256,256
+                    gt = gt.permute(0, 2, 3, 1).contiguous()  # .view(-1, gt.shape[-1]).contiguous()   # 1,256,256,3
+                    for i in range(args.n_classes):
+                        prob_map = pred_prob[..., i]  # 1,128,128
+                        gt_map = (1-gt[..., i])  # 1,128,128
+                        loss = (prob_map * gt_map)/(gt_map.sum()+eps)
+                        deactivating_loss.append(loss.sum())
+                    deactivating_loss = torch.stack(deactivating_loss).sum()
+                    loss += deactivating_loss
 
             loss = loss.to(weight_dtype)
             current_loss = loss.detach().item()
