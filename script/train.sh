@@ -13,7 +13,7 @@ trigger_word="brain"
 benchmark="BraTS2020_Segmentation_128"
 layer_name='layer_3'
 sub_folder="up_16_32_64"
-file_name="2_new_data_absolute_pe_segmentation_model_c_cross_monai_focal_loss"
+file_name="3_new_data_absolute_pe_segmentation_model_c_cross_monai_focal_loss_deactivating_loss"
 # --use_instance_norm
 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_3_4_5_config \
  --main_process_port $port_number ../train.py --log_with wandb \
@@ -34,4 +34,5 @@ accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_3_4_5_config \
  --n_classes 4 \
  --mask_res 256 \
  --use_batchnorm \
- --use_monai_focal_loss
+ --use_monai_focal_loss \
+ --deactivating_loss
