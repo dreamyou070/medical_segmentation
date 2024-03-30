@@ -153,8 +153,10 @@ class TrainDataset_Seg(Dataset):
                 number = 3
             elif 0.75 <= random_p:
                 number = 4
-            img = np.rot90(img, k=number)
-        img = self.transform(img)
+
+            img = np.rot90(img, k=number) # ok, because it is 3 channel image
+
+        img = self.transform(img.copy())
 
         # [2] gt dir
         gt_path = self.gt_paths[idx]  #
