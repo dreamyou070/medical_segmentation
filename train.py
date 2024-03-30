@@ -216,7 +216,9 @@ def main(args):
                     loss = (prob_map * gt_map)/gt_map.sum()
                     deactivating_loss.append(loss.sum())
                 deactivating_loss = torch.stack(deactivating_loss).sum()
+                print(f'deactivating_loss = {deactivating_loss}')
                 loss += deactivating_loss
+                print(f'loss = {loss}')
 
 
 
