@@ -104,7 +104,7 @@ def main(args):
         # [3] segmentation model
         seg_base_dir = os.path.join(parent, f'segmentation')
         pretrained_seg_dir = os.path.join(seg_base_dir, f'segmentation-{lora_epoch}.pt')
-        segmentation_head.load_state_dict(load_file(pretrained_seg_dir))
+        segmentation_head.load_state_dict(torch.load(pretrained_seg_dir))
         segmentation_head.to(accelerator.device, dtype=weight_dtype)
 
         # [4] files
