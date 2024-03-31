@@ -298,7 +298,7 @@ class Segmentation_Head_d(nn.Module):
             self.up6 = Up_conv(in_channels=320,
                                out_channels=320,
                                kernel_size=2)
-        
+
     def forward(self, x16_out, x32_out, x64_out, key):
 
         x1_out = self.up1(x16_out, x32_out)     # 1,640,32,32
