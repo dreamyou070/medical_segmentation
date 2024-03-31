@@ -12,14 +12,13 @@ from utils.model_utils import get_input_ids
 from PIL import Image
 import numpy as np
 from model.diffusion_model import load_target_model
-from model.pe import AllPositionalEmbedding
 from safetensors.torch import load_file
 from torch import nn
 from torch.nn import functional as F
 from model.segmentation_unet import Segmentation_Head_a, Segmentation_Head_b, Segmentation_Head_c
 from sklearn.metrics import confusion_matrix
 from model.pe import AllPositionalEmbedding
-from evaluate.braTS_evaluate import evaluate_braTS
+from evaluate.braTS_evaluate import evaluate_braTS_dict
 from medpy import metric
 from evaluate.braTS_evaluate import hd95_score
 def reshape_batch_dim_to_heads(tensor):
@@ -261,7 +260,7 @@ def main(args):
             if args.obj_name == 'brain':
                 target_class_ids = [[1,2,3],[1,3], [3]]
                 label_list = ['whole','TC', 'ET']
-                dice_per_class =  evaluate_braTS(confusion_score, target_class_ids, label_list)
+                dice_per_class = evaluate_braTS_dict(confusion_score, target_class_ids, label_list)
                 f.write(f'[DICE] whole score = {dice_per_class[label_list[0]]} | TC (tumore core) = {dice_per_class[label_list[1]]} | ET (enhancing tumor) = {dice_per_class[label_list[2]]}\n')
             # [4] per class hd95 score
             for k in hd95_dict.keys():
