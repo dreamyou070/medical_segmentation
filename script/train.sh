@@ -13,10 +13,12 @@ trigger_word="brain"
 benchmark="BraTS2020_Segmentation_256"
 layer_name='layer_3'
 sub_folder="up_16_32_64"
-file_name="4_new_data_pe_segmentation_model_c_use_dice_ce_loss_only_class_1"
+#file_name="4_new_data_pe_segmentation_model_c_use_dice_ce_loss_only_class_1"
+file_name="4_new_data_pe_segmentation_model_d_use_dice_ce_loss_test_guided"
 # --use_instance_norm
 #'up_blocks_1_attentions_2_transformer_blocks_0_attn2',
-#'up_blocks_2_attentions_2_transformer_blocks_0_attn2',
+#'up_blocks_2_attentions_2_transformer_blocks_0_attn2', \
+# --binary_test
 
 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_3_4_5_config \
  --main_process_port $port_number ../train.py --log_with wandb \
@@ -32,9 +34,8 @@ accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_3_4_5_config \
  --trg_layer_list "['up_blocks_1_attentions_2_transformer_blocks_0_attn2',
                     'up_blocks_2_attentions_2_transformer_blocks_0_attn2',
                     'up_blocks_3_attentions_2_transformer_blocks_0_attn2',]" \
- --aggregation_model_c \
- --n_classes 2 \
+ --aggregation_model_d \
+ --n_classes 4 \
  --mask_res 256 \
  --use_batchnorm \
- --use_dice_ce_loss \
- --binary_test
+ --use_dice_ce_loss
