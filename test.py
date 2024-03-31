@@ -215,11 +215,28 @@ def main(args):
 
         confusion_score = confusion_matrix(y, y_hat)
         confusion_score = confusion_score.tolist()
+        # [1] confusion matrix
+        actual_axis = len(confusion_matrix)
+        IOU_dict = {}
+        eps = 1e-15
+        for actual_idx in range(actual_axis):
+            # [1]
+            total_actual_num = sum(confusion_matrix[actual_idx])
+            # [2] total predicted
+            total_predict_num = np.array(confusion_matrix)[:, actual_idx].sum()
+            TP = confusion_matrix[actual_idx][actual_idx]
+            dice_coeff = 2 * TP / (total_actual_num + total_predict_num + eps)
+            IOU_dict[actual_idx] = round(dice_coeff.item(), 3)
+        # [2] saving
         confusion_score_text = os.path.join( lora_base_folder,'confusion_score.txt')
         with open(confusion_score_text, 'w') as f:
             for s in confusion_score:
                 f.write(f'{s}\n')
-        print(f'Model To Original')
+            for k in IOU_dict.keys():
+                f.write(f'class {k} dice score =  {IOU_dict[k]}\n')
+
+        print(f'epoch {lora_epoch} = {IOU_dict}')
+        print(f'Model To Original\n')
         for k in raw_state_dict_orig.keys():
             raw_state_dict[k] = raw_state_dict_orig[k]
         network.load_state_dict(raw_state_dict)
