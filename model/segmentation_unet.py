@@ -323,9 +323,7 @@ class Segmentation_Head_d(nn.Module):
 
         attention_scores = torch.baddbmm(
             torch.empty(query.shape[0], query.shape[1], key.shape[1], dtype=query.dtype, device=query.device),
-            query, key.transpose(-1, -2),
-            beta=0,
-            alpha=self.scale, )
+            query, key.transpose(-1, -2),)
         logits = F.softmax(attention_scores, dim=2) # [1, 65536, 77]
         # -> [1, 320, 256, 256]
         logits = logits.permute(0, 2, 1)
