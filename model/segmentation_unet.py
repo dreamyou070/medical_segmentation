@@ -292,10 +292,16 @@ class Segmentation_Head_efficient(nn.Module):
                                 out_channels = 160,
                                 kernel_size=2) # 64 -> 128 , channel 320 -> 160
         if self.mask_res == 256 :
+            self.up3 = Up_conv(in_channels=320,
+                               out_channels=160,
+                               kernel_size=2)  # 64 -> 128 , channel 320 -> 160
             self.up4 = Up_conv(in_channels = 160,
                                 out_channels = 160,
                                 kernel_size=2)  # 128 -> 256
         if self.mask_res == 512 :
+            self.up3 = Up_conv(in_channels=320,
+                               out_channels=160,
+                               kernel_size=2)  # 64 -> 128 , channel 320 -> 160
             self.up4 = Up_conv(in_channels=160,
                                out_channels=160,
                                kernel_size=2)  # 128 -> 256
