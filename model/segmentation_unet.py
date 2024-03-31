@@ -298,8 +298,7 @@ class Segmentation_Head_d(nn.Module):
             self.up6 = Up_conv(in_channels=320,
                                out_channels=320,
                                kernel_size=2)
-        self.outc = OutConv(160, n_classes)
-
+        
     def forward(self, x16_out, x32_out, x64_out, key):
 
         x1_out = self.up1(x16_out, x32_out)     # 1,640,32,32
@@ -322,7 +321,7 @@ class Segmentation_Head_d(nn.Module):
         query = x_in.permute(0, 2, 1)   # [1, 65536, 320]
 
         attention_scores = torch.matmul(query, key.transpose(-1, -2),)
-        logits = F.softmax(attention_scores, dim=2) # [1, 65536, 77]
+        logits = F.softmax(attention_scores, dim=2) # [1, 65536, 4]
         # -> [1, 320, 256, 256]
         logits = logits.permute(0, 2, 1)
         b, c, hw = logits.size()

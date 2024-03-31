@@ -193,8 +193,6 @@ def main(args):
                 q_dict[res] = reshape_batch_dim_to_heads(query)  # 1, res,res,dim
                 key = key_dict[layer][0][:, :args.n_classes, :]  # head, sen_len, dim
                 k_dict[res] = key
-                print(f'key (batch, 4, dim) = {key.shape}')
-
             x16_out, x32_out, x64_out = q_dict[16], q_dict[32], q_dict[64]
             if not args.aggregation_model_d:
                 if not args.use_init_query:
