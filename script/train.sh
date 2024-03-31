@@ -14,7 +14,7 @@ benchmark="BraTS2020_Segmentation_256"
 layer_name='layer_3'
 sub_folder="up_16_32_64"
 #file_name="4_new_data_pe_segmentation_model_c_use_dice_ce_loss_only_class_1"
-file_name="4_new_data_pe_segmentation_model_d_use_dice_ce_loss_test_guided"
+file_name="4_new_data_pe_segmentation_model_d_use_dice_ce_loss_text_guided"
 # --use_instance_norm
 #'up_blocks_1_attentions_2_transformer_blocks_0_attn2',
 #'up_blocks_2_attentions_2_transformer_blocks_0_attn2', \
