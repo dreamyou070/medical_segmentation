@@ -419,6 +419,7 @@ if __name__ == "__main__":
     parser.add_argument("--use_dice_ce_loss", action='store_true')
     parser.add_argument("--dice_weight", type=float, default=1)
     parser.add_argument("--segmentation_efficient", action='store_true')
+    parser.add_argument("--binary_test", action='store_true')
     args = parser.parse_args()
     unet_passing_argument(args)
     passing_argument(args)

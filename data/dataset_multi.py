@@ -74,7 +74,7 @@ class TrainDataset_Seg(Dataset):
                  root_dir,
                  resize_shape=(240, 240),
                  tokenizer=None,
-                 caption: str = "necrotic, edema, tumor",
+                 caption: str = "brain",
                  latent_res: int = 64,
                  n_classes: int = 4,
                  mask_res = 128,
@@ -166,6 +166,9 @@ class TrainDataset_Seg(Dataset):
             gt_arr = np.rot90(gt_arr, k=number)
         if self.caption == 'brain':
             gt_arr = np.where(gt_arr==4, 3, gt_arr) # 4 -> 3
+
+        if argument.binary_test :
+            gt_arr = np.where(gt_arr==1, 1, 0)
 
         gt_arr_ = to_categorical(gt_arr, num_classes=self.n_classes)
         class_num = gt_arr_.shape[-1]

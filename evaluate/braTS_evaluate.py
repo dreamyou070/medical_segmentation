@@ -21,7 +21,7 @@ def evaluate_braTS_dict (confusion_score, target_class_idx, label_list) :
     for trg_class_list, label in zip(target_class_idx, label_list):
         score = score_multi(trg_class_list, confusion_score_np)
         score_dict[label] = score
-    return score
+    return score_dict
 
 # ----------------------------------------------------------------------------------------------
 def hd95_score(masks_pred, gt_arr, target_class_ids, label_list, hd95_dict):
