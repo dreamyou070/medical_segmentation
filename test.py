@@ -184,12 +184,12 @@ def main(args):
                         y_pred_list.append(torch.Tensor(masks_pred.flatten()))
 
                         gt_pil = np.zeros((folder_res,folder_res,3))
-                        pred_pil = np.zeros((folder_res,folder_res,3))
+                        pred_pil = np.zeros((args.mask_res,args.mask_res,3))
                         n_classes = 4
                         colors = [[0,0,0], [255,0,0], [0,255,0], [0,0,255]]
                         gt_arr = np.load(os.path.join(gt_folder, f'{name}.npy'))  # [128,128]
                         gt_arr = np.where(gt_arr==4,3,gt_arr)
-                        y_true_list.append(torch.Tensor(gt_arr.flatten()))
+                        y_true_list.append(torch.Tensor(gt_arr.flatten())) # [256,256 shape]
                         for c in range(n_classes):
                             position = np.where(masks_pred == c, 1, 0)
                             position = np.expand_dims(position, axis=2)  # 128,128,1
