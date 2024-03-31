@@ -58,21 +58,31 @@ def main(args):
         position_embedder.load_state_dict(position_embedder_state_dict)
         position_embedder.to(dtype=weight_dtype)
 
-    if not args.segmentation_efficient :
+
+    if not args.efficient_train :
         if args.aggregation_model_a:
             segmentation_head_class = Segmentation_Head_a
         if args.aggregation_model_b :
             segmentation_head_class = Segmentation_Head_b
         if args.aggregation_model_c :
             segmentation_head_class = Segmentation_Head_c
-    else :
-        segmentation_head_class = Segmentation_Head_efficient
 
-    segmentation_head = Segmentation_Head_efficient(n_classes=args.n_classes,
-                                                mask_res=args.mask_res,
-                                                use_batchnorm=args.use_batchnorm,
-                                                use_instance_norm=args.use_instance_norm,
-                                                use_init_query =args.use_init_query)
+        segmentation_head = segmentation_head_class(n_classes=args.n_classes,
+                                                    mask_res=args.mask_res,
+                                                    use_batchnorm=args.use_batchnorm,
+                                                    use_instance_norm=args.use_instance_norm,
+                                                    use_init_query =args.use_init_query)
+    else :
+        segmentation_head = segmentation_head_class(n_classes=args.n_classes,
+                                                    mask_res=args.mask_res,
+                                                    use_batchnorm=args.use_batchnorm,
+                                                    use_instance_norm=args.use_instance_norm,
+                                                    use_init_query =args.use_init_query,
+                                                    norm_type = args.norm_type,
+                                                    non_linearity = args.non_linearity,
+                                                    neighbor_size = args.neighbor_size)
+
+
 
     print(f'\n step 5. optimizer')
     args.max_train_steps = len(train_dataloader) * args.max_train_epochs
@@ -191,13 +201,10 @@ def main(args):
                 res = int(query.shape[1] ** 0.5)
                 q_dict[res] = reshape_batch_dim_to_heads(query) # 1, res,res,dim
             x16_out, x32_out, x64_out = q_dict[16], q_dict[32], q_dict[64]
-            if not args.segmentation_efficient:
-                if not args.use_init_query  :
-                    masks_pred = segmentation_head(x16_out, x32_out, x64_out) # 1,4,128,128
-                else :
-                    masks_pred = segmentation_head(x16_out, x32_out, x64_out, x_init = latents) # 1,4,128,128
+            if not args.use_init_query  :
+                masks_pred = segmentation_head(x16_out, x32_out, x64_out) # 1,4,128,128
             else :
-                masks_pred = segmentation_head(x64_out)
+                masks_pred = segmentation_head(x16_out, x32_out, x64_out, x_init = latents) # 1,4,128,128
             masks_pred_ = masks_pred.permute(0, 2, 3, 1).contiguous() # 1,128,128,4 # mask_pred_ = [1,4,512,512]
             masks_pred_ = masks_pred_.view(-1, masks_pred_.shape[-1]).contiguous()
 
@@ -415,7 +422,6 @@ if __name__ == "__main__":
     parser.add_argument("--deactivating_loss", action='store_true')
     parser.add_argument("--use_dice_ce_loss", action='store_true')
     parser.add_argument("--dice_weight", type=float, default=1)
-    parser.add_argument("--segmentation_efficient", action='store_true')
     args = parser.parse_args()
     unet_passing_argument(args)
     passing_argument(args)
