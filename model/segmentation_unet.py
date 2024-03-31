@@ -274,7 +274,7 @@ class Segmentation_Head_efficient(nn.Module):
                  use_instance_norm = True,
                  mask_res = 128,
                  use_init_query = False,):
-        super(Segmentation_Head_a, self).__init__()
+        super(Segmentation_Head_efficient, self).__init__()
 
         self.n_classes = n_classes
         self.mask_res = mask_res
