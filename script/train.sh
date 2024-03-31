@@ -34,4 +34,5 @@ accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_3_4_5_config \
  --n_classes 4 \
  --mask_res 256 \
  --use_batchnorm \
- --use_dice_ce_loss
+ --use_dice_ce_loss \
+ --segmentation_efficient
