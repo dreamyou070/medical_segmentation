@@ -265,61 +265,64 @@ class Segmentation_Head_c(nn.Module):
         return logits
 
 
-class Segmentation_Head_efficient(nn.Module):
+class Segmentation_Head_d(nn.Module):
 
     def __init__(self,
-                 n_classes,
-                 bilinear=False,
+                 n_classes, bilinear=False,
                  use_batchnorm=True,
-                 use_instance_norm = True,
                  mask_res = 128,
-                 use_init_query = False,):
-        super(Segmentation_Head_efficient, self).__init__()
+                 norm_type = 'batch_norm',
+                 use_instance_norm = True,
+                 use_init_query = False):
+
+        super(Segmentation_Head_d, self).__init__()
 
         self.n_classes = n_classes
         self.mask_res = mask_res
         self.bilinear = bilinear
-        factor = 2 if bilinear else 1
-        self.use_init_query = use_init_query
-        if self.use_init_query :
-            self.init_conv = nn.Conv2d(4, 320, kernel_size=3, padding=1, bias=False)
-            self.double_conv = DoubleConv(640, 320, use_batchnorm = use_batchnorm, use_instance_norm = use_instance_norm)
-
-        if self.mask_res == 64 :
-            self.up3 = nn.Conv2d(320, 160, kernel_size=3, padding=1, bias=False)
-        if self.mask_res == 128:
-            self.up3 = Up_conv(in_channels = 320,
-                                out_channels = 160,
-                                kernel_size=2) # 64 -> 128 , channel 320 -> 160
+        factor = 2 if bilinear else 1 # always 1
+        self.up1 = Up(1280, 640 // factor, bilinear, use_batchnorm, use_instance_norm)
+        self.up2 = Up(640, 320 // factor, bilinear, use_batchnorm, use_instance_norm)
+        self.up3 = Up(640, 320 // factor, bilinear, use_batchnorm, use_instance_norm)
+        self.up4 = Up_conv(in_channels = 640,
+                           out_channels = 320,
+                           kernel_size=2)
         if self.mask_res == 256 :
-            self.up3 = Up_conv(in_channels=320,
-                               out_channels=160,
-                               kernel_size=2)  # 64 -> 128 , channel 320 -> 160
-            self.up4 = Up_conv(in_channels = 160,
-                                out_channels = 160,
-                                kernel_size=2)  # 128 -> 256
-        if self.mask_res == 512 :
-            self.up3 = Up_conv(in_channels=320,
-                               out_channels=160,
-                               kernel_size=2)  # 64 -> 128 , channel 320 -> 160
-            self.up4 = Up_conv(in_channels=160,
-                               out_channels=160,
-                               kernel_size=2)  # 128 -> 256
-            self.up5 = Up_conv(in_channels = 160,
-                                out_channels = 160,
-                                kernel_size=2)
+            self.up5 = Up_conv(in_channels = 320,
+                               out_channels = 320,
+                               kernel_size=2)
+        elif self.mask_res == 512 :
+            self.up5 = Up_conv(in_channels=320,
+                               out_channels=320,
+                               kernel_size=2)
+            self.up6 = Up_conv(in_channels=320,
+                               out_channels=320,
+                               kernel_size=2)
         self.outc = OutConv(160, n_classes)
-    def forward(self, x64_out):
-        # batch, 320, 64, 64
 
-        x3_out = self.up3(x64_out)  # 1,160,128,128
-        x_in = x3_out
+    def forward(self, x16_out, x32_out, x64_out, key):
+
+        x1_out = self.up1(x16_out, x32_out)     # 1,640,32,32
+        x2_out = self.up2(x32_out, x64_out)     # 1,320,64,64
+        x3_out = self.up3(x1_out, x2_out)       # 1,320,64,64
+        x = torch.cat([x3_out, x64_out], dim=1) # 1,640,64,64
+        x4_out = self.up4(x)                    # 1,320,128,128
+        x_in = x4_out
         if self.mask_res == 256 :
-            x4_out = self.up4(x3_out)
-            x_in = x4_out
-        if self.mask_res == 512 :
-            x4_out = self.up4(x3_out)
-            x5_out = self.up5(x4_out)
+            x5_out = self.up5(x4_out)            # 1,320,256,256
             x_in = x5_out
-        logits = self.outc(x_in)  # 1,4, 128,128
+        elif self.mask_res == 512 :
+            x5_out = self.up5(x4_out)
+            x6_out = self.up6(x5_out)
+            x_in = x6_out
+        # x_in = [1, 320, 256, 256]
+        # -> [1, H*W, 320] -> [1, H*W, 320]
+        b, c, h, w = x_in.size()
+        x_in = x_in.view(b, c, -1).permute(0, 2, 1)  # [1, 65536, 320]
+        attn = torch.bmm(x_in, key.T)  # [1, 65536, 77]
+        logits = F.softmax(attn, dim=2) # [1, 65536, 77]
+        # -> [1, 320, 256, 256]
+        logits = logits.permute(0, 2, 1)
+        b, c, hw = logits.size()
+        logits = logits.view(b, c, h, w)
         return logits
