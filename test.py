@@ -135,7 +135,7 @@ def main(args):
         mask_res_folders = os.listdir(test_img_folder)
 
         for mask_res_folder in mask_res_folders:
-            folder_res = mask_res_folder.split('_')[-1]
+            folder_res = int(mask_res_folder.split('_')[-1])
             answer_anomal_folder = os.path.join(answer_base_folder, mask_res_folder)
             os.makedirs(answer_anomal_folder, exist_ok=True)
             save_base_folder = os.path.join(check_base_folder, mask_res_folder)
