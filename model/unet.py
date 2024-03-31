@@ -849,6 +849,7 @@ class CrossAttnDownBlock2D(nn.Module):
                 trg_layer_list=None,
                 noise_type=None,
                 **model_kwargs):
+
         output_states = ()
         for resnet, attn in zip(self.resnets, self.attentions):
 
@@ -872,10 +873,10 @@ class CrossAttnDownBlock2D(nn.Module):
                                                                   hidden_states,
                                                                   encoder_hidden_states)[0]
             else:
-                #print(f'before resnet, hiden_states : {hidden_states.shape}')
-                hidden_states = resnet(hidden_states, temb, **model_kwargs) # batch, 4, 512,512
-                #print(f'after resnet block, hiden_states : {hidden_states.shape}')
 
+                hidden_states = resnet(hidden_states, temb, **model_kwargs) # batch, 4, 512,512
+                # -------------------------------------------------------------------------
+                # after resnet
                 hidden_states = attn(hidden_states,
                                      encoder_hidden_states=encoder_hidden_states,
                                      trg_layer_list=trg_layer_list,
@@ -1139,6 +1140,7 @@ class CrossAttnUpBlock2D(nn.Module):
 
         j = 0
         for resnet, attn in zip(self.resnets, self.attentions):
+
             # pop res hidden states
             res_hidden_states = res_hidden_states_tuple[-1]
             res_hidden_states_tuple = res_hidden_states_tuple[:-1]
@@ -1159,13 +1161,13 @@ class CrossAttnUpBlock2D(nn.Module):
                     return custom_forward
 
                 hidden_states = torch.utils.checkpoint.checkpoint(create_custom_forward(resnet),
-                                                                  hidden_states, temb,
-                                                                  )
+                                                                  hidden_states, temb,)
                 hidden_states = torch.utils.checkpoint.checkpoint(create_custom_forward(attn, return_dict=False),
                                                                   hidden_states, encoder_hidden_states,
                                                                   )[0]
             else:
                 hidden_states = resnet(hidden_states, temb, **model_kwargs)
+
                 hidden_states = attn(hidden_states,
                                      encoder_hidden_states=encoder_hidden_states,
                                      trg_layer_list=trg_layer_list,
@@ -1469,15 +1471,32 @@ class UNet2DConditionModel(nn.Module):
         # 5. up
         for i, upsample_block in enumerate(self.up_blocks):
             is_final_block = i == len(self.up_blocks) - 1
-            res_samples = down_block_res_samples[-len(upsample_block.resnets) :] # -3
+
+            # -------------------------------------------------------------------------------------------
+            res_samples            = down_block_res_samples[-len(upsample_block.resnets) :] # -3
+            # the skip connection (every three)
+            #print(f'skip connection : {len(res_samples)}')
+
+            """
+            output = self.calculate_inner_attention(upsample_block.inner_attention,
+                                                    hidden_states=sample,
+                                                    context=encoder_hidden_states,
+                                                    trg_layer_list=trg_layer_list,
+                                                    noise_type=noise_type)
+            """
             down_block_res_samples = down_block_res_samples[: -len(upsample_block.resnets)]  # skip connection
+
+
+
+
+
             if not is_final_block and forward_upsample_size:
                 upsample_size = down_block_res_samples[-1].shape[2:]
 
             if upsample_block.has_cross_attention:
                 sample = upsample_block(hidden_states=sample,
                                         temb=emb,
-                                        res_hidden_states_tuple=res_samples,
+                                        res_hidden_states_tuple=res_samples,         # adding skip connection
                                         encoder_hidden_states=encoder_hidden_states, # text information
                                         upsample_size=upsample_size,
                                         trg_layer_list=trg_layer_list,
@@ -1517,3 +1536,172 @@ class UNet2DConditionModel(nn.Module):
 
         return timesteps
 
+    def add_inner_attention(self, inner_attention):
+        self.inner_attention = InnerAttention()
+
+    def calculate_inner_attention(self,  hidden_states, context=None, trg_layer_list=None, noise_type=None, ):
+        output = self.inner_attentionr(hidden_states, context, trg_layer_list, noise_type)
+        return output
+
+
+class InnerAttention(nn.Module):
+
+    def __init__(
+            self,
+            query_dim: int,
+            cross_attention_dim: Optional[int] = None,
+            heads: int = 8,
+            dim_head: int = 64,
+            upcast_attention: bool = False,
+    ):
+        super().__init__()
+        inner_dim = dim_head * heads
+        cross_attention_dim = cross_attention_dim if cross_attention_dim is not None else query_dim
+        self.upcast_attention = upcast_attention
+
+        self.scale = dim_head ** -0.5
+        self.heads = heads
+
+        self.to_q = nn.Linear(query_dim, inner_dim, bias=False)  # (320, 320)
+        self.to_k = nn.Linear(cross_attention_dim, inner_dim, bias=False)  # (768, 320)
+        self.to_v = nn.Linear(cross_attention_dim, inner_dim, bias=False)  # (768, 320)
+        self.to_out = nn.ModuleList([])
+        self.to_out.append(nn.Linear(inner_dim, query_dim))
+        # no dropout here
+
+        self.use_memory_efficient_attention_xformers = False
+        self.use_memory_efficient_attention_mem_eff = False
+        self.use_sdpa = False
+
+    def set_use_memory_efficient_attention(self, xformers, mem_eff):
+        self.use_memory_efficient_attention_xformers = xformers
+        self.use_memory_efficient_attention_mem_eff = mem_eff
+
+    def set_use_sdpa(self, sdpa):
+        self.use_sdpa = sdpa
+
+    def reshape_heads_to_batch_dim(self, tensor):
+        batch_size, seq_len, dim = tensor.shape
+        head_size = self.heads
+        tensor = tensor.reshape(batch_size, seq_len, head_size, dim // head_size)
+        tensor = tensor.permute(0, 2, 1, 3).reshape(batch_size * head_size, seq_len, dim // head_size)
+        return tensor
+
+    def reshape_batch_dim_to_heads(self, tensor):
+        batch_size, seq_len, dim = tensor.shape
+        head_size = self.heads
+        tensor = tensor.reshape(batch_size // head_size, head_size, seq_len, dim)
+        tensor = tensor.permute(0, 2, 1, 3).reshape(batch_size // head_size, seq_len, dim * head_size)
+        return tensor
+
+    def forward(self, hidden_states, context=None, trg_layer_list=None, noise_type=None):
+        if self.use_memory_efficient_attention_xformers:
+            return self.forward_memory_efficient_xformers(hidden_states, context, mask)
+        if self.use_memory_efficient_attention_mem_eff:
+            return self.forward_memory_efficient_mem_eff(hidden_states, context, mask)
+        if self.use_sdpa:
+            return self.forward_sdpa(hidden_states, context, mask)
+
+        query = self.to_q(hidden_states)
+        context = context if context is not None else hidden_states
+        key = self.to_k(context)
+        value = self.to_v(context)
+
+        query = self.reshape_heads_to_batch_dim(query)
+        key = self.reshape_heads_to_batch_dim(key)
+        value = self.reshape_heads_to_batch_dim(value)
+
+        hidden_states = self._attention(query, key, value)
+
+        # linear proj
+        hidden_states = self.to_out[0](hidden_states)
+        # hidden_states = self.to_out[1](hidden_states)     # no dropout
+        return hidden_states
+
+    def _attention(self, query, key, value):
+        if self.upcast_attention:
+            query = query.float()
+            key = key.float()
+
+        attention_scores = torch.baddbmm(
+            torch.empty(query.shape[0], query.shape[1], key.shape[1], dtype=query.dtype, device=query.device),
+            query,
+            key.transpose(-1, -2),
+            beta=0,
+            alpha=self.scale, )
+        attention_probs = attention_scores.softmax(dim=-1)
+
+        # cast back to the original dtype
+        attention_probs = attention_probs.to(value.dtype)
+
+        # compute attention output
+        hidden_states = torch.bmm(attention_probs, value)
+
+        # reshape hidden_states
+        hidden_states = self.reshape_batch_dim_to_heads(hidden_states)
+        return hidden_states
+
+    # TODO support Hypernetworks
+    def forward_memory_efficient_xformers(self, x, context=None, mask=None):
+        import xformers.ops
+
+        h = self.heads
+        q_in = self.to_q(x)
+        context = context if context is not None else x
+        context = context.to(x.dtype)
+        k_in = self.to_k(context)
+        v_in = self.to_v(context)
+
+        q, k, v = map(lambda t: rearrange(t, "b n (h d) -> b n h d", h=h), (q_in, k_in, v_in))
+        del q_in, k_in, v_in
+
+        q = q.contiguous()
+        k = k.contiguous()
+        v = v.contiguous()
+        out = xformers.ops.memory_efficient_attention(q, k, v, attn_bias=None)  # 最適なのを選んでくれる
+
+        out = rearrange(out, "b n h d -> b n (h d)", h=h)
+
+        out = self.to_out[0](out)
+        return out
+
+    def forward_memory_efficient_mem_eff(self, x, context=None, mask=None):
+        flash_func = FlashAttentionFunction
+
+        q_bucket_size = 512
+        k_bucket_size = 1024
+
+        h = self.heads
+        q = self.to_q(x)
+        context = context if context is not None else x
+        context = context.to(x.dtype)
+        k = self.to_k(context)
+        v = self.to_v(context)
+        del context, x
+
+        q, k, v = map(lambda t: rearrange(t, "b n (h d) -> b h n d", h=h), (q, k, v))
+
+        out = flash_func.apply(q, k, v, mask, False, q_bucket_size, k_bucket_size)
+
+        out = rearrange(out, "b h n d -> b n (h d)")
+
+        out = self.to_out[0](out)
+        return out
+
+    def forward_sdpa(self, x, context=None, mask=None):
+        h = self.heads
+        q_in = self.to_q(x)
+        context = context if context is not None else x
+        context = context.to(x.dtype)
+        k_in = self.to_k(context)
+        v_in = self.to_v(context)
+
+        q, k, v = map(lambda t: rearrange(t, "b n (h d) -> b h n d", h=h), (q_in, k_in, v_in))
+        del q_in, k_in, v_in
+
+        out = F.scaled_dot_product_attention(q, k, v, attn_mask=mask, dropout_p=0.0, is_causal=False)
+
+        out = rearrange(out, "b h n d -> b n (h d)", h=h)
+
+        out = self.to_out[0](out)
+        return out
