@@ -42,11 +42,17 @@ def evaluation_check(segmentation_head, dataloader, device, text_encoder, unet, 
                 query = query_dict[layer][0].squeeze()  # head, pix_num, dim
                 res = int(query.shape[1] ** 0.5)
                 q_dict[res] = reshape_batch_dim_to_heads(query) # 1, res,res,dim
-            x16_out, x32_out, x64_out = q_dict[16], q_dict[32], q_dict[64]
-            if args.use_init_query:
-                masks_pred = segmentation_head(x16_out, x32_out, x64_out,x_init = latents) # 1,4,128,128
+            if not args.segmentation_efficient:
+                x16_out, x32_out, x64_out = q_dict[16], q_dict[32], q_dict[64]
             else :
-                masks_pred = segmentation_head(x16_out, x32_out, x64_out)
+                x64_out = q_dict[64]
+            if not args.segmentation_efficient:
+                if not args.use_init_query  :
+                    masks_pred = segmentation_head(x16_out, x32_out, x64_out) # 1,4,128,128
+                else :
+                    masks_pred = segmentation_head(x16_out, x32_out, x64_out, x_init = latents) # 1,4,128,128
+            else :
+                masks_pred = segmentation_head(x64_out)
             #######################################################################################################################
             # [1] pred
             class_num = masks_pred.shape[1]  # 4
