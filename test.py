@@ -216,15 +216,15 @@ def main(args):
         confusion_score = confusion_matrix(y, y_hat)
         confusion_score = confusion_score.tolist()
         # [1] confusion matrix
-        actual_axis = len(confusion_matrix)
+        actual_axis = len(confusion_score)
         IOU_dict = {}
         eps = 1e-15
         for actual_idx in range(actual_axis):
             # [1]
-            total_actual_num = sum(confusion_matrix[actual_idx])
+            total_actual_num = sum(confusion_score[actual_idx])
             # [2] total predicted
-            total_predict_num = np.array(confusion_matrix)[:, actual_idx].sum()
-            TP = confusion_matrix[actual_idx][actual_idx]
+            total_predict_num = np.array(confusion_score)[:, actual_idx].sum()
+            TP = confusion_score[actual_idx][actual_idx]
             dice_coeff = 2 * TP / (total_actual_num + total_predict_num + eps)
             IOU_dict[actual_idx] = round(dice_coeff.item(), 3)
         # [2] saving
