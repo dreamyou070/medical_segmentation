@@ -186,13 +186,13 @@ def main(args):
             query_dict, key_dict = controller.query_dict, controller.key_dict
             controller.reset()
             q_dict = {}
-            k_list = []
+            k_dict = {}
             for layer in args.trg_layer_list:
                 query = query_dict[layer][0].squeeze()  # head, pix_num, dim
                 res = int(query.shape[1] ** 0.5)
                 q_dict[res] = reshape_batch_dim_to_heads(query)  # 1, res,res,dim
-                if res == 64 :
-                    key = key_dict[layer][0][:, :args.n_classes, :]  # head, sen_len, dim
+                key = key_dict[layer][0][:, :args.n_classes, :]  # head, sen_len, dim
+                k_dict[res] = reshape_batch_dim_to_heads(key)
 
             x16_out, x32_out, x64_out = q_dict[16], q_dict[32], q_dict[64]
             if not args.aggregation_model_d:
@@ -201,6 +201,7 @@ def main(args):
                 else:
                     masks_pred = segmentation_head(x16_out, x32_out, x64_out, x_init=latents)  # 1,4,128,128
             else:
+                key = k_dict[64]
                 masks_pred = segmentation_head(x16_out, x32_out, x64_out, key)  # 1,4,128,128
 
             masks_pred_ = masks_pred.permute(0, 2, 3, 1).contiguous()  # 1,128,128,4 # mask_pred_ = [1,4,512,512]
