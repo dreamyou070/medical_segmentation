@@ -192,7 +192,7 @@ def main(args):
                 res = int(query.shape[1] ** 0.5)
                 q_dict[res] = reshape_batch_dim_to_heads(query)  # 1, res,res,dim
                 if res == 64 :
-                    key = key_dict[layer][0][:, :args.n_classes, :].squeeze()  # head, 77, dim
+                    key = key_dict[layer][0][:, :args.n_classes, :]  # head, sen_len, dim
 
             x16_out, x32_out, x64_out = q_dict[16], q_dict[32], q_dict[64]
             if not args.aggregation_model_d:
