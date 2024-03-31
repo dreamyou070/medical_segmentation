@@ -135,14 +135,14 @@ def main(args):
         mask_res_folders = os.listdir(test_img_folder)
 
         for mask_res_folder in mask_res_folders:
-            res = mask_res_folder.split('_')[-1]
+            folder_res = mask_res_folder.split('_')[-1]
             answer_anomal_folder = os.path.join(answer_base_folder, mask_res_folder)
             os.makedirs(answer_anomal_folder, exist_ok=True)
             save_base_folder = os.path.join(check_base_folder, mask_res_folder)
             os.makedirs(save_base_folder, exist_ok=True)
             anomal_folder_dir = os.path.join(test_img_folder, mask_res_folder)
-            rgb_folder = os.path.join(anomal_folder_dir, f'image_{res}')
-            gt_folder = os.path.join(anomal_folder_dir, f'mask_{res}')
+            rgb_folder = os.path.join(anomal_folder_dir, f'image_{folder_res}')
+            gt_folder = os.path.join(anomal_folder_dir, f'mask_{folder_res}')
             rgb_imgs = os.listdir(rgb_folder)
 
             y_pred_list, y_true_list = [], []
@@ -183,8 +183,8 @@ def main(args):
                         masks_pred = np.argmax(masks_pred, axis=0) # [128,128], unique = 0,1,2,3
                         y_pred_list.append(torch.Tensor(masks_pred.flatten()))
 
-                        gt_pil = np.zeros((128,128,3))
-                        pred_pil = np.zeros((128,128,3))
+                        gt_pil = np.zeros((folder_res,folder_res,3))
+                        pred_pil = np.zeros((folder_res,folder_res,3))
                         n_classes = 4
                         colors = [[0,0,0], [255,0,0], [0,255,0], [0,0,255]]
                         gt_arr = np.load(os.path.join(gt_folder, f'{name}.npy'))  # [128,128]
