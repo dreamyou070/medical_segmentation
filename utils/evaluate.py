@@ -79,5 +79,8 @@ def evaluation_check(segmentation_head, dataloader, device, text_encoder, unet, 
             total_predict_num = sum(confusion_matrix[:, actual_idx])
             dice_coeff = 2 * confusion_matrix[actual_idx, actual_idx] / (total_actual_num + total_predict_num + eps)
             IOU_dict[actual_idx] = round(dice_coeff.item(), 3)
+
+        # [1] WC Score
+
     segmentation_head.train()
     return IOU_dict, confusion_matrix, dice_coeff
