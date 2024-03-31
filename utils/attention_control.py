@@ -56,7 +56,7 @@ def register_attention_control(unet: nn.Module,controller: AttentionStore):
             if trg_layer_list is not None and layer_name in trg_layer_list:
                 if argument.aggregation_model_d :
                     controller.save_query(hidden_states, layer_name)  # query = batch, seq_len, dim
-                    controller.save_key(key_, layer_name)
+                    controller.save_key(key, layer_name)
             hidden_states = self.reshape_batch_dim_to_heads(hidden_states)
 
             hidden_states = self.to_out[0](hidden_states)
