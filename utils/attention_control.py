@@ -52,12 +52,12 @@ def register_attention_control(unet: nn.Module,controller: AttentionStore):
                 alpha=self.scale,)
             attention_probs = attention_scores.softmax(dim=-1).to(value.dtype)
             hidden_states = torch.bmm(attention_probs, value)
-            hidden_states = self.reshape_batch_dim_to_heads(hidden_states)
 
             if trg_layer_list is not None and layer_name in trg_layer_list:
                 if argument.aggregation_model_d :
                     controller.save_query(hidden_states, layer_name)  # query = batch, seq_len, dim
                     controller.save_key(key_, layer_name)
+            hidden_states = self.reshape_batch_dim_to_heads(hidden_states)
 
             hidden_states = self.to_out[0](hidden_states)
 
