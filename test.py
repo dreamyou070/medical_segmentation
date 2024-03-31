@@ -132,16 +132,17 @@ def main(args):
         test_img_folder = args.data_path
         if args.do_train_check :
             test_img_folder = os.path.join(os.path.split(test_img_folder)[0], 'train')
-        anomal_folders = os.listdir(test_img_folder)
+        mask_res_folders = os.listdir(test_img_folder)
 
-        for anomal_folder in anomal_folders:
-            answer_anomal_folder = os.path.join(answer_base_folder, anomal_folder)
+        for mask_res_folder in mask_res_folders:
+            res = mask_res_folder.split('_')[-1]
+            answer_anomal_folder = os.path.join(answer_base_folder, mask_res_folder)
             os.makedirs(answer_anomal_folder, exist_ok=True)
-            save_base_folder = os.path.join(check_base_folder, anomal_folder)
+            save_base_folder = os.path.join(check_base_folder, mask_res_folder)
             os.makedirs(save_base_folder, exist_ok=True)
-            anomal_folder_dir = os.path.join(test_img_folder, anomal_folder)
-            rgb_folder = os.path.join(anomal_folder_dir, 'image_256')
-            gt_folder = os.path.join(anomal_folder_dir, 'mask_128')
+            anomal_folder_dir = os.path.join(test_img_folder, mask_res_folder)
+            rgb_folder = os.path.join(anomal_folder_dir, f'image_{res}')
+            gt_folder = os.path.join(anomal_folder_dir, f'mask_{res}')
             rgb_imgs = os.listdir(rgb_folder)
 
             y_pred_list, y_true_list = [], []
