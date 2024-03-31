@@ -318,8 +318,15 @@ class Segmentation_Head_d(nn.Module):
         # x_in = [1, 320, 256, 256]
         # -> [1, H*W, 320] -> [1, H*W, 320]
         b, c, h, w = x_in.size()
-        x_in = x_in.view(b, c, -1).permute(0, 2, 1)  # [1, 65536, 320]
+        x_in = x_in.view(b, c, -1)     # [1, 320, 65536]
+        x_in = x_in.permute(0, 2, 1)   # [1, 65536, 320]
+        print(f'x_in {x_in.shape}')
+        print(f'key (1, dim, 4) {key.shape}')
         attn = torch.bmm(x_in, key.T)  # [1, 65536, 77]
+
+
+
+
         logits = F.softmax(attn, dim=2) # [1, 65536, 77]
         # -> [1, 320, 256, 256]
         logits = logits.permute(0, 2, 1)
