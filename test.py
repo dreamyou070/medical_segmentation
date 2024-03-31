@@ -21,7 +21,7 @@ from sklearn.metrics import confusion_matrix
 from model.pe import AllPositionalEmbedding
 from evaluate.braTS_evaluate import evaluate_braTS
 from medpy import metric
-
+from evaluate.braTS_evaluate import hd95_score
 def reshape_batch_dim_to_heads(tensor):
     batch_size, seq_len, dim = tensor.shape
     head_size = 8
@@ -33,6 +33,11 @@ def reshape_batch_dim_to_heads(tensor):
     tensor = tensor.view(batch_size // head_size, res, res, dim * head_size).contiguous()
     tensor = tensor.permute(0, 3, 1, 2).contiguous()  # 1, dim, res,res
     return tensor
+
+
+
+
+
 
 def main(args):
 
@@ -80,6 +85,11 @@ def main(args):
     network.apply_to(text_encoder, unet, True, True)
     raw_state_dict = network.state_dict()
     raw_state_dict_orig = raw_state_dict.copy()
+
+    # [4] Task By Class
+    if args.obj_name == 'brain':
+        target_class_ids = [[1, 2, 3], [1, 3], [3]]
+        label_list = ['whole', 'TC', 'ET']
 
     for model in models:
 
@@ -147,6 +157,8 @@ def main(args):
             rgb_imgs = os.listdir(rgb_folder)
 
             y_pred_list, y_true_list = [], []
+            hd95_dict = {}
+
             for rgb_img in rgb_imgs:
                 name, ext = os.path.splitext(rgb_img)
                 rgb_img_dir = os.path.join(rgb_folder, rgb_img)
@@ -187,20 +199,12 @@ def main(args):
                         # ----------------------------------------------------------------------------------------------
                         gt_arr = np.load(os.path.join(gt_folder, f'{name}.npy'))  # [128,128]
                         gt_arr = np.where(gt_arr == 4, 3, gt_arr)
-                        # ----------------------------------------------------------------------------------------------
-                        target_class_ids = [[1, 2, 3], [1, 3], [3]]
-                        label_list = ['whole', 'TC', 'ET']
-                        bool_pred = np.zeros_like(masks_pred)
-                        bool_gt = np.zeros_like(gt_arr)
-                        hd95_dict = {}
-                        for target_class_list, label in zip(target_class_ids, label_list):
-                            for i in target_class_list:
-                                bool_pred[masks_pred == i] = 1
-                                bool_gt[gt_arr == i] = 1
-                            hd95 = metric.binary.hd95(bool_pred, bool_gt)
-                            if label not in hd95_dict.keys():
-                                hd95_dict[label] = []
-                            hd95_dict[label].append(hd95)
+
+                        if args.obj_name == 'brain':
+                            hd95_dict = hd95_score(masks_pred, gt_arr, target_class_ids, label_list, hd95_dict)
+
+
+
                         gt_pil = np.zeros((folder_res,folder_res,3))
                         pred_pil = np.zeros((args.mask_res,args.mask_res,3))
                         n_classes = 4
