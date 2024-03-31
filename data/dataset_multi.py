@@ -86,7 +86,8 @@ class TrainDataset_Seg(Dataset):
         folders = os.listdir(self.root_dir)
         for folder in folders :
             folder_dir = os.path.join(self.root_dir, folder)
-            rgb_folder = os.path.join(folder_dir, f'image_{mask_res}')
+            folder_res = folder.split('_')[-1]
+            rgb_folder = os.path.join(folder_dir, f'image_{folder_res}')
             gt_folder = os.path.join(folder_dir, f'mask_{mask_res}') # [128,128]
             files = os.listdir(rgb_folder)
             for file in files:
