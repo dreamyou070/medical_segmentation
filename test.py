@@ -46,6 +46,7 @@ def main(args):
     tokenizer = load_tokenizer(args)
     text_encoder, vae, unet, _ = load_target_model(args, weight_dtype, accelerator)
     print(f' (2.2) position embedder')
+    position_embedder = None
     if args.use_position_embedder:
         position_embedder = AllPositionalEmbedding(pe_do_concat=args.pe_do_concat,
                                                    do_semantic_position = args.do_semantic_position)
@@ -86,8 +87,8 @@ def main(args):
         lora_epoch = int(lora_name.split('-')[-1])
         lora_epoch = str(lora_epoch).zfill(6)
         # [1] loead pe
+        parent = os.path.split(args.network_folder)[0]
         if args.use_position_embedder:
-            parent = os.path.split(args.network_folder)[0]
             pe_base_dir = os.path.join(parent, f'position_embedder')
             pretrained_pe_dir = os.path.join(pe_base_dir, f'position_embedder-{lora_epoch}.pt')
             position_embedder_state_dict = torch.load(pretrained_pe_dir)
