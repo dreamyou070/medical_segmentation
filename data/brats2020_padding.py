@@ -28,14 +28,12 @@ def main():
     # [3] t2
     # [4] mask
 
-    folder_128 = r'/home/dreamyou070/MyData/anomaly_detection/medical/brain/BraTS2020_Segmentation_128'
-    folder_128_image = os.path.join(folder_128, 'image_128')
+    folder_128 = r'/home/dreamyou070/MyData/anomaly_detection/medical/brain/BraTS2020_Segmentation_128/train/anomal'
     folder_128_mask = os.path.join(folder_128, 'mask_128')
     folder_256_mask = os.path.join(folder_128, 'mask_256')
     os.makedirs(folder_256_mask, exist_ok = True)
 
-    test_folder_128 = os.path.join(folder_128, 'test')
-    test_folder_128_image = os.path.join(test_folder_128, 'image_128')
+    test_folder_128 = r'/home/dreamyou070/MyData/anomaly_detection/medical/brain/BraTS2020_Segmentation_128/test/anomal'
     test_folder_128_mask = os.path.join(test_folder_128, 'mask_128')
     test_folder_256_mask = os.path.join(test_folder_128, 'mask_256')
     os.makedirs(test_folder_256_mask, exist_ok = True)
