@@ -1,12 +1,12 @@
 # !/bin/bash
 
-port_number=50042
+port_number=50052
 category="medical"
 obj_name="brain"
 benchmark="BraTS2020_Segmentation_256"
 layer_name='layer_3'
 sub_folder="up_16_32_64"
-file_name="1_new_data_absolute_pe_segmentation_model_c_use_dice_ce_loss"
+file_name="2_new_data_absolute_pe_segmentation_model_c_cross_monai_focal_loss"
 # --use_position_embedder \
 #
 accelerate launch --config_file ../../../gpu_config/gpu_0_config \
@@ -24,4 +24,4 @@ accelerate launch --config_file ../../../gpu_config/gpu_0_config \
  --aggregation_model_c \
  --n_classes 4 \
  --mask_res 128 \
- --use_batchnorm
+ --use_batchnorm --use_position_embedder
