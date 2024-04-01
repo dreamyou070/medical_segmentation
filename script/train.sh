@@ -38,4 +38,4 @@ accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_3_4_5_config \
  --use_batchnorm \
  --use_dice_ce_loss \
  --optimizer_args weight_decay=0.00005 \
- --use_noise_regularization --mas_timestep 200
+ --use_noise_regularization --max_timestep 200
