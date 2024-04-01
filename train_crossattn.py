@@ -77,23 +77,24 @@ def main(args):
 
     print(f'\n step 5. optimizer')
     args.max_train_steps = len(train_dataloader) * args.max_train_epochs
-    def register_recr(net_, count, layer_name, trainable_params):
+
+    def register_optimizer_param(net_, layer_name, trainable_params):
         if net_.__class__.__name__ == 'CrossAttention':
             trainable_params.append(net_.parameter())
         elif hasattr(net_, 'children'):
             for name__, net__ in net_.named_children():
                 full_name = f'{layer_name}_{name__}'
-                count = register_recr(net__, count, full_name)
+                count = register_optimizer_param(net__, full_name, trainable_params)
         return trainable_params
 
     params = []
     for net in unet.named_children():
         if "down" in net[0]:
-            params = register_recr(net[1], 0, net[0], params)
+            params = register_optimizer_param(net[1], net[0], trainable_params=params)
         elif "up" in net[0]:
-            params = register_recr(net[1], 0, net[0], params)
+            params = register_optimizer_param(net[1], net[0], trainable_params=params)
         elif "mid" in net[0]:
-            params = register_recr(net[1], 0, net[0], params)
+            params = register_optimizer_param(net[1], net[0], trainable_params=params)
     trainable_params = [{"params": params, "lr": args.learning_rate}]
 
     if args.use_position_embedder:
