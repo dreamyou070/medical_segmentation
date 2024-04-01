@@ -272,17 +272,18 @@ class Segmentation_Head_d(nn.Module):
                  mask_res = 128,
                  norm_type = 'batch_norm',
                  use_instance_norm = True,
-                 use_init_query = False):
+                 use_init_query = False,
+                 attn_factor = 5):
         super(Segmentation_Head_d, self).__init__()
 
         self.n_classes = n_classes
         self.mask_res = mask_res
         self.bilinear = bilinear
         factor = 2 if bilinear else 1 # always 1
-        self.up1 = Up(1280*3, 640*3 // factor, bilinear, use_batchnorm, use_instance_norm)
-        self.up2 = Up(640*3, 320*3 // factor, bilinear, use_batchnorm, use_instance_norm)
-        self.up3 = Up(640*3, 320*3 // factor, bilinear, use_batchnorm, use_instance_norm)
-        self.up4 = Up_conv(in_channels = 640*3,
+        self.up1 = Up(1280*attn_factor, 640*attn_factor // factor, bilinear, use_batchnorm, use_instance_norm)
+        self.up2 = Up(640*attn_factor, 320*attn_factor // factor, bilinear, use_batchnorm, use_instance_norm)
+        self.up3 = Up(640*attn_factor, 320*attn_factor // factor, bilinear, use_batchnorm, use_instance_norm)
+        self.up4 = Up_conv(in_channels = 640*attn_factor,
                             out_channels = 160,
                             kernel_size=2)
         if self.mask_res == 256 :

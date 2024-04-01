@@ -70,7 +70,8 @@ def main(args):
                                                 mask_res=args.mask_res,
                                                 use_batchnorm=args.use_batchnorm,
                                                 use_instance_norm=args.use_instance_norm,
-                                                use_init_query=args.use_init_query)
+                                                use_init_query=args.use_init_query,
+                                                attn_factor=args.attn_factor,)
 
     print(f'\n step 5. optimizer')
     args.max_train_steps = len(train_dataloader) * args.max_train_epochs
@@ -429,6 +430,7 @@ if __name__ == "__main__":
     parser.add_argument("--dice_weight", type=float, default=1)
     parser.add_argument("--segmentation_efficient", action='store_true')
     parser.add_argument("--binary_test", action='store_true')
+    parser.add_argument("--attn_factor", type=int, default=3)
     args = parser.parse_args()
     unet_passing_argument(args)
     passing_argument(args)

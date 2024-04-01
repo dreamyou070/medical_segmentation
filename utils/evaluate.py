@@ -54,7 +54,7 @@ def evaluation_check(segmentation_head, dataloader, device, text_encoder, unet, 
             if not args.use_init_query:
                 masks_pred = segmentation_head(x16_out, x32_out, x64_out)  # 1,4,128,128
             else:
-                masks_pred = segmentation_head(x16_out, x32_out, x64_out, x_init=latents)  # 1,4,128,128    
+                masks_pred = segmentation_head(x16_out, x32_out, x64_out, x_init=latents)  # 1,4,128,128
 
             #######################################################################################################################
             # [1] pred
