@@ -198,7 +198,7 @@ def main(args):
 
             for k_res in q_dict.keys():
                 query_list = q_dict[k_res]
-                q_dict[k_res] = torch.cat(query_list, dim=-1)
+                q_dict[k_res] = torch.cat(query_list, dim=1)
 
             x16_out, x32_out, x64_out = q_dict[16], q_dict[32], q_dict[64]
             if not args.use_init_query:
