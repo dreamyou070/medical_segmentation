@@ -445,6 +445,7 @@ if __name__ == "__main__":
     parser.add_argument("--binary_test", action='store_true')
     parser.add_argument("--attn_factor", type=int, default=3)
     parser.add_argument("--max_timestep", type=int, default=200)
+    parser.add_argument("--min_timestep", type=int, default=0)
     parser.add_argument("--use_noise_regularization", action='store_true')
     args = parser.parse_args()
     unet_passing_argument(args)

@@ -219,7 +219,8 @@ class Segmentation_Head_c(nn.Module):
                  mask_res = 128,
                  norm_type = 'batch_norm',
                  use_instance_norm = True,
-                 use_init_query = False):
+                 use_init_query = False,
+                 attn_factor = 5):
         super(Segmentation_Head_c, self).__init__()
 
         self.n_classes = n_classes
