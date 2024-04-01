@@ -239,20 +239,8 @@ def main(args):
             else:
                 out, masks_pred = segmentation_head(x16_out, x32_out, x64_out, x_init=latents)  # 1,4,128,128
 
-            # out = [batch, C, H, W]
-            gt = batch['gt'].to(dtype=weight_dtype)  # 1,3,256,256
-            class_num = gt.shape[1]
-            model_dim = out.shape[1]
-            class_wise_mean = []
-            for i in range(class_num):
-                gt_map = gt[:, i, :, :].repeat(1,model_dim, 1, 1) # 0 = non, 1 = class pixel
-                classwise_map = gt_map * out
-                pixel_num = gt_map.sum()
-                if pixel_num != 0:
-                    class_mean = classwise_map.sum() / pixel_num
-                    class_wise_mean.append(class_mean)
 
-            # contrastive learning
+
 
 
             masks_pred_ = masks_pred.permute(0, 2, 3, 1).contiguous()  # 1,128,128,4 # mask_pred_ = [1,4,512,512]
@@ -297,6 +285,26 @@ def main(args):
                     deactivating_loss = torch.stack(deactivating_loss).sum()
                     loss += deactivating_loss
                 loss = loss.mean()
+
+            if args.contrastive_learning :
+                # out = [batch, C, H, W]
+                gt = batch['gt'].to(dtype=weight_dtype)  # 1,3,256,256
+                class_num = gt.shape[1]
+                model_dim = out.shape[1]
+                class_wise_mean = []
+                for i in range(class_num):
+                    pixel_num = gt[:, i, :, :].sum()
+                    gt_map = gt[:, i, :, :].repeat(1, model_dim, 1, 1)  # 0 = non, 1 = class pixel
+                    classwise_map = gt_map * out
+                    if pixel_num != 0:
+                        class_mean_vector = classwise_map.sum(dim=(-2, -1)) / pixel_num
+                        class_wise_mean.append(class_mean_vector.squeeze())
+                class_matrix = torch.stack(class_wise_mean, dim=0)  # class_num, model_dim
+                contrastive_matrix = torch.matmul(class_matrix, class_matrix.t())
+                class_n = class_matrix.shape[0]
+                negitive_score = ((1 - torch.eye(class_n)) * contrastive_matrix).mean()
+                loss += negitive_score
+                loss_dict['contrastive_loss'] = negitive_score.item()
 
             loss = loss.to(weight_dtype)
             current_loss = loss.detach().item()
@@ -491,6 +499,7 @@ if __name__ == "__main__":
     parser.add_argument("--min_timestep", type=int, default=0)
     parser.add_argument("--use_noise_regularization", action='store_true')
     parser.add_argument("--vae_train", action='store_true')
+    parser.add_argument("--contrastive_learning", action='store_true')
     args = parser.parse_args()
     unet_passing_argument(args)
     passing_argument(args)
