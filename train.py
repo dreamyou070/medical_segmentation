@@ -85,6 +85,8 @@ def main(args):
     trainable_params = network.prepare_optimizer_params(args.text_encoder_lr, args.unet_lr, args.learning_rate)
     if args.use_position_embedder:
         trainable_params.append({"params": position_embedder.parameters(), "lr": args.learning_rate})
+    if args.vae_train :
+        trainable_params.append({"params": vae.parameters(), "lr": args.learning_rate})
     trainable_params.append({"params": segmentation_head.parameters(), "lr": args.learning_rate})
 
     optimizer_name, optimizer_args, optimizer = get_optimizer(args, trainable_params)
@@ -129,21 +131,35 @@ def main(args):
 
     print(f'\n step 8. model to device')
     if args.use_position_embedder:
-        segmentation_head, unet, text_encoder, network, optimizer, train_dataloader, test_dataloader, lr_scheduler, position_embedder = \
-            accelerator.prepare(segmentation_head, unet, text_encoder, network, optimizer, train_dataloader,
-                                test_dataloader, lr_scheduler, position_embedder)
+        if args.vae_train :
+            vae, segmentation_head, unet, text_encoder, network, optimizer, train_dataloader, test_dataloader, lr_scheduler, position_embedder = \
+                accelerator.prepare(vae, segmentation_head, unet, text_encoder, network, optimizer, train_dataloader,
+                                    test_dataloader, lr_scheduler, position_embedder)
+        else :
+            segmentation_head, unet, text_encoder, network, optimizer, train_dataloader, test_dataloader, lr_scheduler, position_embedder = \
+                accelerator.prepare(segmentation_head, unet, text_encoder, network, optimizer, train_dataloader,
+                                    test_dataloader, lr_scheduler, position_embedder)
     else:
-        segmentation_head, unet, text_encoder, network, optimizer, train_dataloader, test_dataloader, lr_scheduler = \
-            accelerator.prepare(segmentation_head, unet, text_encoder, network, optimizer, train_dataloader,
-                                test_dataloader, lr_scheduler)
+        if args.vae_train :
+            vae, segmentation_head, unet, text_encoder, network, optimizer, train_dataloader, test_dataloader, lr_scheduler = \
+                accelerator.prepare(vae, segmentation_head, unet, text_encoder, network, optimizer, train_dataloader,
+                                    test_dataloader, lr_scheduler)
+        else :
+            segmentation_head, unet, text_encoder, network, optimizer, train_dataloader, test_dataloader, lr_scheduler = \
+                accelerator.prepare(segmentation_head, unet, text_encoder, network, optimizer, train_dataloader,
+                                    test_dataloader, lr_scheduler)
 
     text_encoders = transform_models_if_DDP([text_encoder])
     unet, network = transform_models_if_DDP([unet, network])
+    if args.vae_train :
+        vae = transform_models_if_DDP([vae])[0]
     if args.use_position_embedder:
         position_embedder = transform_models_if_DDP([position_embedder])[0]
     if args.gradient_checkpointing:
         unet.train()
         position_embedder.train()
+        if args.vae_train :
+            vae.train()
         segmentation_head.train()
         for t_enc in text_encoders:
             t_enc.train()
@@ -157,7 +173,8 @@ def main(args):
             t_enc.eval()
     del t_enc
     network.prepare_grad_etc(text_encoder, unet)
-    vae.to(accelerator.device, dtype=weight_dtype)
+    if not args.vae_train :
+        vae.to(accelerator.device, dtype=weight_dtype)
 
     print(f'\n step 9. registering saving tensor')
     controller = AttentionStore()
@@ -186,14 +203,17 @@ def main(args):
             gt = batch['gt'].to(dtype=weight_dtype)  # 1,3,256,256
             gt = gt.permute(0, 2, 3, 1).contiguous()  # .view(-1, gt.shape[-1]).contiguous()   # 1,256,256,3
             gt = gt.view(-1, gt.shape[-1]).contiguous()
-            with torch.no_grad():
-                # how does it do ?
+            if args.vae_train :
                 latents = vae.encode(image).latent_dist.sample() * args.vae_scale_factor
+            else :
+                with torch.no_grad():
+                    # how does it do ?
+                    latents = vae.encode(image).latent_dist.sample() * args.vae_scale_factor
 
-                if args.use_noise_regularization :
-                    # For Generalize add small noise
-                    noise, noisy_latents, timesteps = get_noise_noisy_latents_and_timesteps(args, noise_scheduler, latents, noise = None)
-                    latents = noisy_latents
+            if args.use_noise_regularization :
+                # For Generalize add small noise
+                noise, noisy_latents, timesteps = get_noise_noisy_latents_and_timesteps(args, noise_scheduler, latents, noise = None)
+                latents = noisy_latents
 
             with torch.set_grad_enabled(True):
                 unet(latents, 0, encoder_hidden_states, trg_layer_list=args.trg_layer_list,
@@ -215,9 +235,25 @@ def main(args):
 
             x16_out, x32_out, x64_out = q_dict[16], q_dict[32], q_dict[64]
             if not args.use_init_query:
-                masks_pred = segmentation_head(x16_out, x32_out, x64_out)  # 1,4,128,128
+                out, masks_pred = segmentation_head(x16_out, x32_out, x64_out)  # 1,4,128,128
             else:
-                masks_pred = segmentation_head(x16_out, x32_out, x64_out, x_init=latents)  # 1,4,128,128
+                out, masks_pred = segmentation_head(x16_out, x32_out, x64_out, x_init=latents)  # 1,4,128,128
+
+            # out = [batch, C, H, W]
+            gt = batch['gt'].to(dtype=weight_dtype)  # 1,3,256,256
+            class_num = gt.shape[1]
+            model_dim = out.shape[1]
+            class_wise_mean = []
+            for i in range(class_num):
+                gt_map = gt[:, i, :, :].repeat(1,model_dim, 1, 1) # 0 = non, 1 = class pixel
+                classwise_map = gt_map * out
+                pixel_num = gt_map.sum()
+                if pixel_num != 0:
+                    class_mean = classwise_map.sum() / pixel_num
+                    class_wise_mean.append(class_mean)
+
+            # contrastive learning
+
 
             masks_pred_ = masks_pred.permute(0, 2, 3, 1).contiguous()  # 1,128,128,4 # mask_pred_ = [1,4,512,512]
             masks_pred_ = masks_pred_.view(-1, masks_pred_.shape[-1]).contiguous()
@@ -303,6 +339,13 @@ def main(args):
                        saving_name=f'segmentation-{saving_epoch}.pt',
                        unwrapped_nw=accelerator.unwrap_model(segmentation_head),
                        save_dtype=save_dtype)
+            if args.vae_train :
+                save_model(args,
+                           saving_folder='vae',
+                           saving_name=f'vae-{saving_epoch}.pt',
+                           unwrapped_nw=accelerator.unwrap_model(vae),
+                           save_dtype=save_dtype)
+
         # ----------------------------------------------------------------------------------------------------------- #
         # [7] evaluate
         loader = test_dataloader
@@ -447,6 +490,7 @@ if __name__ == "__main__":
     parser.add_argument("--max_timestep", type=int, default=200)
     parser.add_argument("--min_timestep", type=int, default=0)
     parser.add_argument("--use_noise_regularization", action='store_true')
+    parser.add_argument("--vae_train", action='store_true')
     args = parser.parse_args()
     unet_passing_argument(args)
     passing_argument(args)

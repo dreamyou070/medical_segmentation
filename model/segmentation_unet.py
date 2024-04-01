@@ -262,8 +262,9 @@ class Segmentation_Head_c(nn.Module):
             x5_out = self.up5(x4_out)
             x6_out = self.up6(x5_out)
             x_in = x6_out
+
         logits = self.outc(x_in)  # 1,3,256,256
-        return logits
+        return x_in, logits
 
 class Segmentation_Head_d(nn.Module):
 
