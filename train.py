@@ -6,6 +6,7 @@ from torch import nn
 import os
 from attention_store import AttentionStore
 from data import call_dataset
+from diffusers import DDPMScheduler
 from model import call_model_package
 from model.segmentation_unet import Segmentation_Head_a, Segmentation_Head_b, Segmentation_Head_c, Segmentation_Head_d
 from model.diffusion_model import transform_models_if_DDP
@@ -20,6 +21,7 @@ from utils.evaluate import evaluation_check
 from model.pe import AllPositionalEmbedding
 from safetensors.torch import load_file
 from monai.utils import DiceCEReduction, LossReduction
+from utils import get_noise_noisy_latents_and_timesteps
 
 
 def main(args):
@@ -46,6 +48,11 @@ def main(args):
     print(f'\n step 4. model')
     weight_dtype, save_dtype = prepare_dtype(args)
     text_encoder, vae, unet, network = call_model_package(args, weight_dtype, accelerator)
+    noise_scheduler = DDPMScheduler(beta_start=0.00085,
+                                    beta_end=0.012,
+                                    beta_schedule="scaled_linear",
+                                    num_train_timesteps=1000,
+                                    clip_sample=False)
     # [2] pe
     position_embedder = AllPositionalEmbedding(pe_do_concat=args.pe_do_concat,
                                                do_semantic_position=args.do_semantic_position,
@@ -182,6 +189,11 @@ def main(args):
             with torch.no_grad():
                 # how does it do ?
                 latents = vae.encode(image).latent_dist.sample() * args.vae_scale_factor
+
+                # For Generalize add small noise
+                noise, noisy_latents, timesteps = get_noise_noisy_latents_and_timesteps(args, noise_scheduler, latents, noise = None)
+                latents = noisy_latents
+
             with torch.set_grad_enabled(True):
                 unet(latents, 0, encoder_hidden_states, trg_layer_list=args.trg_layer_list,
                      noise_type=position_embedder)
@@ -431,6 +443,7 @@ if __name__ == "__main__":
     parser.add_argument("--segmentation_efficient", action='store_true')
     parser.add_argument("--binary_test", action='store_true')
     parser.add_argument("--attn_factor", type=int, default=3)
+    parser.add_argument("--max_timestep", type=int, default=200)
     args = parser.parse_args()
     unet_passing_argument(args)
     passing_argument(args)
