@@ -302,7 +302,7 @@ def main(args):
                 class_matrix = torch.stack(class_wise_mean, dim=0)  # class_num, model_dim
                 contrastive_matrix = torch.matmul(class_matrix, class_matrix.t())
                 class_n = class_matrix.shape[0]
-                negitive_score = ((1 - torch.eye(class_n)) * contrastive_matrix).mean()
+                negitive_score = ((1 - torch.eye(class_n).to(class_matrix.device)) * contrastive_matrix).mean()
                 loss += negitive_score
                 loss_dict['contrastive_loss'] = negitive_score.item()
 
