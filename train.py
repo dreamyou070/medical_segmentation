@@ -190,9 +190,10 @@ def main(args):
                 # how does it do ?
                 latents = vae.encode(image).latent_dist.sample() * args.vae_scale_factor
 
-                # For Generalize add small noise
-                noise, noisy_latents, timesteps = get_noise_noisy_latents_and_timesteps(args, noise_scheduler, latents, noise = None)
-                latents = noisy_latents
+                if args.use_noise_regularization :
+                    # For Generalize add small noise
+                    noise, noisy_latents, timesteps = get_noise_noisy_latents_and_timesteps(args, noise_scheduler, latents, noise = None)
+                    latents = noisy_latents
 
             with torch.set_grad_enabled(True):
                 unet(latents, 0, encoder_hidden_states, trg_layer_list=args.trg_layer_list,
@@ -444,6 +445,7 @@ if __name__ == "__main__":
     parser.add_argument("--binary_test", action='store_true')
     parser.add_argument("--attn_factor", type=int, default=3)
     parser.add_argument("--max_timestep", type=int, default=200)
+    parser.add_argument("--use_noise_regularization", action='store_true')
     args = parser.parse_args()
     unet_passing_argument(args)
     passing_argument(args)

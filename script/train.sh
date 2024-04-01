@@ -6,18 +6,15 @@
 # 4_absolute_pe_segmentation_model_c_cross_focal_use_batch_norm_query
 # 6_absolute_pe_segmentation_model_b_cross_focal_use_batch_norm_query
 
-port_number=51259
+port_number=51261
 category="medical"
 obj_name="brain"
 trigger_word="brain"
 benchmark="BraTS2020_Segmentation_256"
 layer_name='layer_3'
 sub_folder="up_16_32_64"
-#file_name="4_new_data_pe_segmentation_model_c_use_dice_ce_loss_only_class_1"
-file_name="6_new_data_absolute_pe_segmentation_model_d_all_five_block_use_dice_ce_loss_network_dim_128_robustness_noise_200"
+file_name="1_new_data_absolute_pe_segmentation_model_c_use_dice_ce_loss_network_dim_128_weight_decay"
 # --use_instance_norm
-#'up_blocks_1_attentions_2_transformer_blocks_0_attn2',
-#'up_blocks_2_attentions_2_transformer_blocks_0_attn2', \
 # --binary_test
 
 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_3_4_5_config \
@@ -32,11 +29,12 @@ accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_3_4_5_config \
  --latent_res 64 \
  --trigger_word "${trigger_word}" \
  --obj_name "${obj_name}" \
- --trg_layer_list "['up_blocks_1_attentions_0_transformer_blocks_0_attn2','up_blocks_1_attentions_1_transformer_blocks_0_attn2','up_blocks_1_attentions_2_transformer_blocks_0_attn2',
-                    'up_blocks_2_attentions_0_transformer_blocks_0_attn2','up_blocks_2_attentions_1_transformer_blocks_0_attn2','up_blocks_2_attentions_2_transformer_blocks_0_attn2',
-                    'up_blocks_3_attentions_0_transformer_blocks_0_attn2','up_blocks_3_attentions_1_transformer_blocks_0_attn2','up_blocks_3_attentions_2_transformer_blocks_0_attn2',]" \
- --aggregation_model_d --attn_factor 3 \
+ --trg_layer_list "['up_blocks_1_attentions_2_transformer_blocks_0_attn2',
+                    'up_blocks_2_attentions_2_transformer_blocks_0_attn2',
+                    'up_blocks_3_attentions_2_transformer_blocks_0_attn2',]" \
+ --aggregation_model_c \
  --n_classes 4 \
  --mask_res 256 \
  --use_batchnorm \
- --use_dice_ce_loss
+ --use_dice_ce_loss \
+ --optimizer_args weight_decay=0.00005
