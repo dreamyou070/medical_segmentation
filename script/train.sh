@@ -6,14 +6,14 @@
 # 4_absolute_pe_segmentation_model_c_cross_focal_use_batch_norm_query
 # 6_absolute_pe_segmentation_model_b_cross_focal_use_batch_norm_query
 
-port_number=51261
+port_number=51262
 category="medical"
 obj_name="brain"
 trigger_word="brain"
 benchmark="BraTS2020_Segmentation_256"
 layer_name='layer_3'
 sub_folder="up_16_32_64"
-file_name="1_new_data_absolute_pe_segmentation_model_c_use_dice_ce_loss_network_dim_128_weight_decay"
+file_name="1_new_data_absolute_pe_segmentation_model_c_use_dice_ce_loss_network_dim_128_weight_decay_noise_timestep_200"
 # --use_instance_norm
 # --binary_test
 
@@ -37,4 +37,5 @@ accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_3_4_5_config \
  --mask_res 256 \
  --use_batchnorm \
  --use_dice_ce_loss \
- --optimizer_args weight_decay=0.00005
+ --optimizer_args weight_decay=0.00005 \
+ --use_noise_regularization --mas_timestep 200
