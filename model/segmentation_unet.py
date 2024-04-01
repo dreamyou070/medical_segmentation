@@ -265,7 +265,7 @@ class Segmentation_Head_c(nn.Module):
         return logits
 
 
-class Segmentation_Head_d(nn.Module):
+class Segmentation_Head_c(nn.Module):
 
     def __init__(self,
                  n_classes, bilinear=False,
@@ -274,32 +274,33 @@ class Segmentation_Head_d(nn.Module):
                  norm_type = 'batch_norm',
                  use_instance_norm = True,
                  use_init_query = False):
-
-        super(Segmentation_Head_d, self).__init__()
+        super(Segmentation_Head_c, self).__init__()
 
         self.n_classes = n_classes
         self.mask_res = mask_res
         self.bilinear = bilinear
         factor = 2 if bilinear else 1 # always 1
-        self.up1 = Up(1280, 640 // factor, bilinear, use_batchnorm, use_instance_norm)
+        self.up1 = Up(1280*3, 640*3 // factor, bilinear, use_batchnorm, use_instance_norm)
         self.up2 = Up(640, 320 // factor, bilinear, use_batchnorm, use_instance_norm)
         self.up3 = Up(640, 320 // factor, bilinear, use_batchnorm, use_instance_norm)
         self.up4 = Up_conv(in_channels = 640,
-                           out_channels = 320,
-                           kernel_size=2)
+                            out_channels = 160,
+                            kernel_size=2)
         if self.mask_res == 256 :
-            self.up5 = Up_conv(in_channels = 320,
-                               out_channels = 320,
-                               kernel_size=2)
+            self.up5 = Up_conv(in_channels = 160,
+                                out_channels = 160,
+                                kernel_size=2)
         elif self.mask_res == 512 :
-            self.up5 = Up_conv(in_channels=320,
-                               out_channels=320,
-                               kernel_size=2)
-            self.up6 = Up_conv(in_channels=320,
-                               out_channels=320,
-                               kernel_size=2)
 
-    def forward(self, x16_out, x32_out, x64_out, key):
+            self.up5 = Up_conv(in_channels=160,
+                               out_channels=160,
+                               kernel_size=2)
+            self.up6 = Up_conv(in_channels=160,
+                               out_channels=160,
+                               kernel_size=2)
+        self.outc = OutConv(160, n_classes)
+
+    def forward(self, x16_out, x32_out, x64_out):
 
         x1_out = self.up1(x16_out, x32_out)     # 1,640,32,32
         x2_out = self.up2(x32_out, x64_out)     # 1,320,64,64
@@ -314,16 +315,5 @@ class Segmentation_Head_d(nn.Module):
             x5_out = self.up5(x4_out)
             x6_out = self.up6(x5_out)
             x_in = x6_out
-        # x_in = [1, 320, 256, 256]
-        # -> [1, H*W, 320] -> [1, H*W, 320]
-        b, c, h, w = x_in.size()
-        x_in = x_in.view(b, c, -1)     # [1, 320, 65536]
-        query = x_in.permute(0, 2, 1)   # [1, 65536, 320]
-
-        attention_scores = torch.matmul(query, key.transpose(-1, -2),)
-        logits = F.softmax(attention_scores, dim=2) # [1, 65536, 4]
-        # -> [1, 320, 256, 256]
-        logits = logits.permute(0, 2, 1)
-        b, c, hw = logits.size()
-        logits = logits.view(b, c, h, w)
+        logits = self.outc(x_in)  # 1,3,256,256
         return logits
