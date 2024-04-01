@@ -6,7 +6,7 @@
 # 4_absolute_pe_segmentation_model_c_cross_focal_use_batch_norm_query
 # 6_absolute_pe_segmentation_model_b_cross_focal_use_batch_norm_query
 
-port_number=51256
+port_number=51257
 category="medical"
 obj_name="brain"
 trigger_word="brain"
@@ -14,7 +14,7 @@ benchmark="BraTS2020_Segmentation_256"
 layer_name='layer_3'
 sub_folder="up_16_32_64"
 #file_name="4_new_data_pe_segmentation_model_c_use_dice_ce_loss_only_class_1"
-file_name="1_new_data_absolute_pe_segmentation_model_c_use_dice_ce_loss_network_dim_128"
+file_name="5_new_data_absolute_pe_segmentation_model_d_all_three_block_up_use_dice_ce_loss_network_dim_128"
 # --use_instance_norm
 #'up_blocks_1_attentions_2_transformer_blocks_0_attn2',
 #'up_blocks_2_attentions_2_transformer_blocks_0_attn2', \
@@ -32,9 +32,9 @@ accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_3_4_5_config \
  --latent_res 64 \
  --trigger_word "${trigger_word}" \
  --obj_name "${obj_name}" \
- --trg_layer_list "['up_blocks_1_attentions_2_transformer_blocks_0_attn2',
-                    'up_blocks_2_attentions_2_transformer_blocks_0_attn2',
-                    'up_blocks_3_attentions_2_transformer_blocks_0_attn2',]" \
+ --trg_layer_list "['up_blocks_1_attentions_0_transformer_blocks_0_attn2','up_blocks_1_attentions_1_transformer_blocks_0_attn2','up_blocks_1_attentions_2_transformer_blocks_0_attn2',
+                    'up_blocks_2_attentions_0_transformer_blocks_0_attn2','up_blocks_2_attentions_1_transformer_blocks_0_attn2','up_blocks_2_attentions_2_transformer_blocks_0_attn2',
+                    'up_blocks_3_attentions_0_transformer_blocks_0_attn2','up_blocks_3_attentions_1_transformer_blocks_0_attn2','up_blocks_3_attentions_2_transformer_blocks_0_attn2',]" \
  --aggregation_model_d \
  --n_classes 4 \
  --mask_res 256 \

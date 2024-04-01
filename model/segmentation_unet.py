@@ -263,3 +263,55 @@ class Segmentation_Head_c(nn.Module):
             x_in = x6_out
         logits = self.outc(x_in)  # 1,3,256,256
         return logits
+
+class Segmentation_Head_d(nn.Module):
+
+    def __init__(self,
+                 n_classes, bilinear=False,
+                 use_batchnorm=True,
+                 mask_res = 128,
+                 norm_type = 'batch_norm',
+                 use_instance_norm = True,
+                 use_init_query = False):
+        super(Segmentation_Head_d, self).__init__()
+
+        self.n_classes = n_classes
+        self.mask_res = mask_res
+        self.bilinear = bilinear
+        factor = 2 if bilinear else 1 # always 1
+        self.up1 = Up(1280*3, 640*3 // factor, bilinear, use_batchnorm, use_instance_norm)
+        self.up2 = Up(640*3, 320*3 // factor, bilinear, use_batchnorm, use_instance_norm)
+        self.up3 = Up(640*3, 320*3 // factor, bilinear, use_batchnorm, use_instance_norm)
+        self.up4 = Up_conv(in_channels = 640*3,
+                            out_channels = 160,
+                            kernel_size=2)
+        if self.mask_res == 256 :
+            self.up5 = Up_conv(in_channels = 160,
+                                out_channels = 160,
+                                kernel_size=2)
+        elif self.mask_res == 512 :
+            self.up5 = Up_conv(in_channels=160,
+                               out_channels=160,
+                               kernel_size=2)
+            self.up6 = Up_conv(in_channels=160,
+                               out_channels=160,
+                               kernel_size=2)
+        self.outc = OutConv(160, n_classes)
+
+    def forward(self, x16_out, x32_out, x64_out):
+
+        x1_out = self.up1(x16_out, x32_out)     # 1,640,32,32
+        x2_out = self.up2(x32_out, x64_out)     # 1,320,64,64
+        x3_out = self.up3(x1_out, x2_out)       # 1,320,64,64
+        x = torch.cat([x3_out, x64_out], dim=1) # 1,640,64,64
+        x4_out = self.up4(x)                    # 1,320,128,128
+        x_in = x4_out
+        if self.mask_res == 256 :
+            x5_out = self.up5(x4_out)            # 1,320,256,256
+            x_in = x5_out
+        elif self.mask_res == 512 :
+            x5_out = self.up5(x4_out)
+            x6_out = self.up6(x5_out)
+            x_in = x6_out
+        logits = self.outc(x_in)  # 1,3,256,256
+        return logits

@@ -63,6 +63,7 @@ def main(args):
     if args.aggregation_model_c:
         segmentation_head_class = Segmentation_Head_c
     if args.aggregation_model_d:
+        # total 3 channel all input
         segmentation_head_class = Segmentation_Head_d
 
     segmentation_head = segmentation_head_class(n_classes=args.n_classes,
@@ -190,18 +191,20 @@ def main(args):
             for layer in args.trg_layer_list:
                 query = query_dict[layer][0].squeeze()  # head, pix_num, dim
                 res = int(query.shape[1] ** 0.5)
-                q_dict[res] = reshape_batch_dim_to_heads(query)  # 1, res,res,dim
-                key = key_dict[layer][0][:, :args.n_classes, :]  # head, sen_len, dim
-                k_dict[res] = key
+                reshaped_query = reshape_batch_dim_to_heads(query)  # 1, res, res, dim
+                if res not in q_dict:
+                    q_dict[res] = []
+                q_dict[res].append(reshaped_query)
+
+            for k_res in q_dict.keys():
+                query_list = q_dict[k_res]
+                q_dict[k_res] = torch.cat(query_list, dim=-1)
+
             x16_out, x32_out, x64_out = q_dict[16], q_dict[32], q_dict[64]
-            if not args.aggregation_model_d:
-                if not args.use_init_query:
-                    masks_pred = segmentation_head(x16_out, x32_out, x64_out)  # 1,4,128,128
-                else:
-                    masks_pred = segmentation_head(x16_out, x32_out, x64_out, x_init=latents)  # 1,4,128,128
+            if not args.use_init_query:
+                masks_pred = segmentation_head(x16_out, x32_out, x64_out)  # 1,4,128,128
             else:
-                key = k_dict[64]
-                masks_pred = segmentation_head(x16_out, x32_out, x64_out, key)  # 1,4,128,128
+                masks_pred = segmentation_head(x16_out, x32_out, x64_out, x_init=latents)  # 1,4,128,128
 
             masks_pred_ = masks_pred.permute(0, 2, 3, 1).contiguous()  # 1,128,128,4 # mask_pred_ = [1,4,512,512]
             masks_pred_ = masks_pred_.view(-1, masks_pred_.shape[-1]).contiguous()
