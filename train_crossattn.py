@@ -49,8 +49,7 @@ def main(args):
     weight_dtype, save_dtype = prepare_dtype(args)
     text_encoder, vae, unet, network = call_model_package(args, weight_dtype, accelerator)
     # [2] pe
-    position_embedder = AllPositionalEmbedding(pe_do_concat=args.pe_do_concat,
-                                               do_semantic_position=args.do_semantic_position,)
+    position_embedder = AllPositionalEmbedding(pe_do_concat=args.pe_do_concat, do_semantic_position=args.do_semantic_position,)
 
     if args.position_embedder_weights is not None:
         position_embedder_state_dict = load_file(args.position_embedder_weights)
@@ -96,8 +95,6 @@ def main(args):
         elif "mid" in net[0]:
             params = register_optimizer_param(net[1], net[0], trainable_params=params)
     trainable_params = [{"params": params, "lr": args.learning_rate}]
-
-
     if args.use_position_embedder:
         trainable_params.append({"params": position_embedder.parameters(), "lr": args.learning_rate})
     if args.vae_train :
@@ -199,7 +196,7 @@ def main(args):
         for step, batch in enumerate(train_dataloader):
             device = accelerator.device
             loss_dict = {}
-            encoder_hidden_states = text_encoder(batch["input_ids"].to(device))["last_hidden_state"]
+            encoder_hidden_states = text_encoder(batch["input_ids"])["last_hidden_state"]
             image = batch['image'].to(dtype=weight_dtype)  # 1,3,512,512
             gt_flat = batch['gt_flat'].to(dtype=weight_dtype)  # 1,128*128
             gt = batch['gt'].to(dtype=weight_dtype)  # 1,3,256,256
@@ -211,15 +208,15 @@ def main(args):
                 with torch.no_grad():
                     # how does it do ?
                     latents = vae.encode(image).latent_dist.sample() * args.vae_scale_factor
-
+            """
             if args.use_noise_regularization :
                 # For Generalize add small noise
                 noise, noisy_latents, timesteps = get_noise_noisy_latents_and_timesteps(args, noise_scheduler, latents, noise = None)
                 latents = noisy_latents
+            """
 
             with torch.set_grad_enabled(True):
-                unet(latents, 0, encoder_hidden_states, trg_layer_list=args.trg_layer_list,
-                     noise_type=position_embedder)
+                unet(latents, 0, encoder_hidden_states, trg_layer_list=args.trg_layer_list, noise_type=position_embedder)
             query_dict, key_dict = controller.query_dict, controller.key_dict
             controller.reset()
             q_dict = {}
