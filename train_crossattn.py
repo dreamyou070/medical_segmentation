@@ -80,7 +80,7 @@ def main(args):
 
     def register_optimizer_param(net_, layer_name, trainable_params):
         if net_.__class__.__name__ == 'CrossAttention':
-            trainable_params.append(net_.parameter())
+            trainable_params.append(net_.parameters())
         elif hasattr(net_, 'children'):
             for name__, net__ in net_.named_children():
                 full_name = f'{layer_name}_{name__}'
@@ -104,7 +104,6 @@ def main(args):
     trainable_params.append({"params": segmentation_head.parameters(), "lr": args.learning_rate})
 
     optimizer_name, optimizer_args, optimizer = get_optimizer(args, trainable_params)
-    """
 
     print(f'\n step 6. lr')
     lr_scheduler = get_scheduler_fix(args, optimizer, accelerator.num_processes)
@@ -146,22 +145,12 @@ def main(args):
 
     print(f'\n step 8. model to device')
     if args.use_position_embedder:
-        if args.vae_train :
-            vae, segmentation_head, unet, text_encoder, network, optimizer, train_dataloader, test_dataloader, lr_scheduler, position_embedder = \
-                accelerator.prepare(vae, segmentation_head, unet, text_encoder, network, optimizer, train_dataloader,
-                                    test_dataloader, lr_scheduler, position_embedder)
-        else :
-            segmentation_head, unet, text_encoder, network, optimizer, train_dataloader, test_dataloader, lr_scheduler, position_embedder = \
-                accelerator.prepare(segmentation_head, unet, text_encoder, network, optimizer, train_dataloader,
+        segmentation_head, unet, text_encoder, optimizer, train_dataloader, test_dataloader, lr_scheduler, position_embedder = \
+                accelerator.prepare(segmentation_head, unet, text_encoder, optimizer, train_dataloader,
                                     test_dataloader, lr_scheduler, position_embedder)
     else:
-        if args.vae_train :
-            vae, segmentation_head, unet, text_encoder, network, optimizer, train_dataloader, test_dataloader, lr_scheduler = \
-                accelerator.prepare(vae, segmentation_head, unet, text_encoder, network, optimizer, train_dataloader,
-                                    test_dataloader, lr_scheduler)
-        else :
-            segmentation_head, unet, text_encoder, network, optimizer, train_dataloader, test_dataloader, lr_scheduler = \
-                accelerator.prepare(segmentation_head, unet, text_encoder, network, optimizer, train_dataloader,
+        segmentation_head, unet, text_encoder, optimizer, train_dataloader, test_dataloader, lr_scheduler = \
+                accelerator.prepare(segmentation_head, unet, text_encoder, optimizer, train_dataloader,
                                     test_dataloader, lr_scheduler)
 
     text_encoders = transform_models_if_DDP([text_encoder])
@@ -404,7 +393,6 @@ def main(args):
                 f.write(f'| dice_coeff = {dice_coeff}')
                 f.write(f'\n')
     accelerator.end_training()
-    """
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
