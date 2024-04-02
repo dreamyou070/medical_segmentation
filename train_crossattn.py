@@ -50,8 +50,7 @@ def main(args):
     text_encoder, vae, unet, network = call_model_package(args, weight_dtype, accelerator)
     # [2] pe
     position_embedder = AllPositionalEmbedding(pe_do_concat=args.pe_do_concat,
-                                               do_semantic_position=args.do_semantic_position,
-                                               )
+                                               do_semantic_position=args.do_semantic_position,)
 
     if args.position_embedder_weights is not None:
         position_embedder_state_dict = load_file(args.position_embedder_weights)
@@ -148,19 +147,18 @@ def main(args):
     print(f'\n step 8. model to device')
     if args.use_position_embedder:
         segmentation_head, unet, text_encoder, optimizer, train_dataloader, test_dataloader, lr_scheduler, position_embedder = \
-                accelerator.prepare(segmentation_head, unet, text_encoder, optimizer, train_dataloader,
-                                    test_dataloader, lr_scheduler, position_embedder)
+        accelerator.prepare(segmentation_head, unet, text_encoder, optimizer, train_dataloader, test_dataloader, lr_scheduler, position_embedder)
     else:
         segmentation_head, unet, text_encoder, optimizer, train_dataloader, test_dataloader, lr_scheduler = \
-                accelerator.prepare(segmentation_head, unet, text_encoder, optimizer, train_dataloader,
-                                    test_dataloader, lr_scheduler)
+        accelerator.prepare(segmentation_head, unet, text_encoder, optimizer, train_dataloader, test_dataloader, lr_scheduler)
 
-    text_encoders = transform_models_if_DDP([text_encoder])
-    unet, network = transform_models_if_DDP([unet, network])
-    if args.vae_train :
-        vae = transform_models_if_DDP([vae])[0]
-    if args.use_position_embedder:
-        position_embedder = transform_models_if_DDP([position_embedder])[0]
+    #text_encoders = transform_models_if_DDP([text_encoder])
+    #unet, network = transform_models_if_DDP([unet, network])
+    #if args.vae_train :
+    #    vae = transform_models_if_DDP([vae])[0]
+    #if args.use_position_embedder:
+    #    position_embedder = transform_models_if_DDP([position_embedder])[0]
+    """
     if args.gradient_checkpointing:
         unet.train()
         position_embedder.train()
@@ -181,6 +179,7 @@ def main(args):
     network.prepare_grad_etc(text_encoder, unet)
     if not args.vae_train :
         vae.to(accelerator.device, dtype=weight_dtype)
+    """
 
     print(f'\n step 9. registering saving tensor')
     controller = AttentionStore()
