@@ -80,7 +80,8 @@ def main(args):
 
     def register_optimizer_param(net_, layer_name, trainable_params):
         if net_.__class__.__name__ == 'CrossAttention':
-            trainable_params.append(net_.parameters())
+            for p in list(net_.parameters()):
+                trainable_params.append(p)
         elif hasattr(net_, 'children'):
             for name__, net__ in net_.named_children():
                 full_name = f'{layer_name}_{name__}'
@@ -96,6 +97,7 @@ def main(args):
         elif "mid" in net[0]:
             params = register_optimizer_param(net[1], net[0], trainable_params=params)
     trainable_params = [{"params": params, "lr": args.learning_rate}]
+    
 
     if args.use_position_embedder:
         trainable_params.append({"params": position_embedder.parameters(), "lr": args.learning_rate})
