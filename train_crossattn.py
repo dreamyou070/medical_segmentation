@@ -178,9 +178,7 @@ def main(args):
                 with torch.no_grad():
                     # how does it do ?
                     latents = vae.encode(image).latent_dist.sample() * args.vae_scale_factor
-
-            with torch.set_grad_enabled(True):
-                unet(latents, 0, encoder_hidden_states, trg_layer_list=args.trg_layer_list, noise_type=position_embedder)
+            unet(latents, 0, encoder_hidden_states, trg_layer_list=args.trg_layer_list, noise_type=position_embedder)
             query_dict, key_dict = controller.query_dict, controller.key_dict
             controller.reset()
             q_dict = {}
@@ -288,6 +286,16 @@ def main(args):
         accelerator.wait_for_everyone()
         if is_main_process:
             saving_epoch = str(epoch + 1).zfill(6)
+            save_model(args,
+                       saving_folder='text_encoder',
+                       saving_name=f'text_encoder-{saving_epoch}.pt',
+                       unwrapped_nw=accelerator.unwrap_model(text_encoder),
+                       save_dtype=save_dtype)
+            save_model(args,
+                       saving_folder='unet',
+                       saving_name=f'unet-{saving_epoch}.pt',
+                       unwrapped_nw=accelerator.unwrap_model(unet),
+                       save_dtype=save_dtype)
             if args.use_position_embedder:
                 save_model(args,
                            saving_folder='position_embedder',

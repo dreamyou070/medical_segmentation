@@ -13,7 +13,7 @@ trigger_word="brain"
 benchmark="BraTS2020_Segmentation_256"
 layer_name='layer_3'
 sub_folder="up_16_32_64"
-file_name="1_new_data_absolute_pe_segmentation_model_c_use_dice_ce_loss_not_lora_crossattn_training_weight_decay"
+file_name="1_new_data_absolute_pe_segmentation_model_c_use_dice_ce_loss_not_lora_crossattn_vae_train_training_weight_decay"
 # --use_instance_norm
 # --binary_test
 
@@ -36,4 +36,5 @@ accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_3_4_5_config \
  --mask_res 256 \
  --use_batchnorm \
  --use_dice_ce_loss \
- --optimizer_args weight_decay=0.00005
+ --optimizer_args weight_decay=0.00005 \
+ --vae_train
