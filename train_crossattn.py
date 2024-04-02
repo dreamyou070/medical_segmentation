@@ -196,6 +196,10 @@ def main(args):
         for step, batch in enumerate(train_dataloader):
             device = accelerator.device
             loss_dict = {}
+
+            data_device = batch["input_ids"].device
+            model_device = text_encoder.device
+            print(f'data_device = {data_device} | model_device = {model_device}')
             encoder_hidden_states = text_encoder(batch["input_ids"])["last_hidden_state"]
             image = batch['image'].to(dtype=weight_dtype)  # 1,3,512,512
             gt_flat = batch['gt_flat'].to(dtype=weight_dtype)  # 1,128*128
