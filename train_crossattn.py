@@ -47,7 +47,7 @@ def main(args):
 
     print(f'\n step 4. model')
     weight_dtype, save_dtype = prepare_dtype(args)
-    text_encoder, vae, unet, network = call_model_package(args, weight_dtype, accelerator)
+    text_encoder, vae, unet, network = call_model_package(args, weight_dtype, accelerator, False, False)
     # [2] pe
     position_embedder = AllPositionalEmbedding(pe_do_concat=args.pe_do_concat, do_semantic_position=args.do_semantic_position,)
 
@@ -334,11 +334,13 @@ def main(args):
         accelerator.wait_for_everyone()
         if is_main_process:
             saving_epoch = str(epoch + 1).zfill(6)
+            """
             save_model(args,
                        saving_folder='model',
                        saving_name=f'lora-{saving_epoch}.safetensors',
                        unwrapped_nw=accelerator.unwrap_model(network),
                        save_dtype=save_dtype)
+            """
             if args.use_position_embedder:
                 save_model(args,
                            saving_folder='position_embedder',
