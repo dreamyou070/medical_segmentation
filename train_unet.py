@@ -76,33 +76,16 @@ def main(args):
     print(f'\n step 5. optimizer')
     args.max_train_steps = len(train_dataloader) * args.max_train_epochs
 
-    def register_optimizer_param(net_, layer_name, trainable_params):
-        if net_.__class__.__name__ == 'CrossAttention':
-            for p in list(net_.parameters()):
-                trainable_params.append(p)
-        elif hasattr(net_, 'children'):
-            for name__, net__ in net_.named_children():
-                full_name = f'{layer_name}_{name__}'
-                count = register_optimizer_param(net__, full_name, trainable_params)
-        return trainable_params
 
     params = []
-    for net in unet.named_children():
-        if "down" in net[0]:
-            params = register_optimizer_param(net[1], net[0], trainable_params=params)
-        elif "up" in net[0]:
-            params = register_optimizer_param(net[1], net[0], trainable_params=params)
-        elif "mid" in net[0]:
-            params = register_optimizer_param(net[1], net[0], trainable_params=params)
-
-    print(f'len of parmas = {len(params)}')
+    for p in list(unet.parameters()):
+        params.append(p)
     trainable_params = [{"params": params, "lr": args.learning_rate}]
 
     if args.use_position_embedder:
         trainable_params.append({"params": position_embedder.parameters(), "lr": args.learning_rate})
     if args.vae_train :
         trainable_params.append({"params": vae.parameters(), "lr": args.learning_rate})
-    trainable_params.append({"params": text_encoder.parameters(), "lr": args.text_encoder_lr})
     trainable_params.append({"params": segmentation_head.parameters(), "lr": args.learning_rate})
 
     optimizer_name, optimizer_args, optimizer = get_optimizer(args, trainable_params)
@@ -167,8 +150,6 @@ def main(args):
 
         epoch_loss_total = 0
         accelerator.print(f"\nepoch {epoch + 1}/{args.start_epoch + args.max_train_epochs}")
-        unet.train()
-        text_encoder.train()
 
         for step, batch in enumerate(train_dataloader):
             loss_dict = {}

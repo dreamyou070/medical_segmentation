@@ -13,12 +13,12 @@ trigger_word="brain"
 benchmark="BraTS2020_Segmentation_256"
 layer_name='layer_3'
 sub_folder="up_16_32_64"
-file_name="cross_attn_file_check"
+file_name="1_new_data_absolute_pe_segmentation_model_c_use_dice_ce_loss_unet_crossattn_vae_train_training_weight_decay"
 # --use_instance_norm
 # --binary_test
 
 accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_3_4_5_config \
- --main_process_port $port_number ../train_crossattn.py --log_with wandb \
+ --main_process_port $port_number ../train_unet.py --log_with wandb \
  --output_dir "../../result/${category}/${obj_name}/${benchmark}/${sub_folder}/${file_name}" \
  --train_unet --train_text_encoder --start_epoch 0 --max_train_epochs 200 \
  --pretrained_model_name_or_path ../../../pretrained_stable_diffusion/stable-diffusion-v1-5/v1-5-pruned.safetensors \

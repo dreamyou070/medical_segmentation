@@ -55,8 +55,7 @@ def main(args):
                                     clip_sample=False)
     # [2] pe
     position_embedder = AllPositionalEmbedding(pe_do_concat=args.pe_do_concat,
-                                               do_semantic_position=args.do_semantic_position,
-                                               )
+                                               do_semantic_position=args.do_semantic_position,)
 
     if args.position_embedder_weights is not None:
         position_embedder_state_dict = load_file(args.position_embedder_weights)
