@@ -149,35 +149,6 @@ def main(args):
         segmentation_head, unet, text_encoder, optimizer, train_dataloader, test_dataloader, lr_scheduler = \
         accelerator.prepare(segmentation_head, unet, text_encoder, optimizer, train_dataloader, test_dataloader, lr_scheduler)
 
-    #text_encoders = transform_models_if_DDP([text_encoder])
-    #unet, network = transform_models_if_DDP([unet, network])
-    #if args.vae_train :
-    #    vae = transform_models_if_DDP([vae])[0]
-    #if args.use_position_embedder:
-    #    position_embedder = transform_models_if_DDP([position_embedder])[0]
-    """
-    if args.gradient_checkpointing:
-        unet.train()
-        position_embedder.train()
-        if args.vae_train :
-            vae.train()
-        segmentation_head.train()
-        for t_enc in text_encoders:
-            t_enc.train()
-            if args.train_text_encoder:
-                t_enc.text_model.embeddings.requires_grad_(True)
-        if not args.train_text_encoder:  # train U-Net only
-            unet.parameters().__next__().requires_grad_(True)
-    else:
-        unet.eval()
-        for t_enc in text_encoders:
-            t_enc.eval()
-    del t_enc
-    network.prepare_grad_etc(text_encoder, unet)
-    if not args.vae_train :
-        vae.to(accelerator.device, dtype=weight_dtype)
-    """
-
     print(f'\n step 9. registering saving tensor')
     controller = AttentionStore()
     register_attention_control(unet, controller)
@@ -194,12 +165,7 @@ def main(args):
         accelerator.print(f"\nepoch {epoch + 1}/{args.start_epoch + args.max_train_epochs}")
 
         for step, batch in enumerate(train_dataloader):
-            device = accelerator.device
             loss_dict = {}
-
-            data_device = batch["input_ids"].device
-            model_device = text_encoder.device
-            print(f'data_device = {data_device} | model_device = {model_device}')
             encoder_hidden_states = text_encoder(batch["input_ids"])["last_hidden_state"]
             image = batch['image'].to(dtype=weight_dtype)  # 1,3,512,512
             gt_flat = batch['gt_flat'].to(dtype=weight_dtype)  # 1,128*128
@@ -212,12 +178,6 @@ def main(args):
                 with torch.no_grad():
                     # how does it do ?
                     latents = vae.encode(image).latent_dist.sample() * args.vae_scale_factor
-            """
-            if args.use_noise_regularization :
-                # For Generalize add small noise
-                noise, noisy_latents, timesteps = get_noise_noisy_latents_and_timesteps(args, noise_scheduler, latents, noise = None)
-                latents = noisy_latents
-            """
 
             with torch.set_grad_enabled(True):
                 unet(latents, 0, encoder_hidden_states, trg_layer_list=args.trg_layer_list, noise_type=position_embedder)
@@ -241,14 +201,8 @@ def main(args):
                 out, masks_pred = segmentation_head(x16_out, x32_out, x64_out)  # 1,4,128,128
             else:
                 out, masks_pred = segmentation_head(x16_out, x32_out, x64_out, x_init=latents)  # 1,4,128,128
-
-
-
-
-
             masks_pred_ = masks_pred.permute(0, 2, 3, 1).contiguous()  # 1,128,128,4 # mask_pred_ = [1,4,512,512]
             masks_pred_ = masks_pred_.view(-1, masks_pred_.shape[-1]).contiguous()
-
             if args.use_dice_ce_loss:
                 loss = loss_dicece(input=masks_pred,
                                    target=batch['gt'].to(dtype=weight_dtype))
@@ -334,13 +288,6 @@ def main(args):
         accelerator.wait_for_everyone()
         if is_main_process:
             saving_epoch = str(epoch + 1).zfill(6)
-            """
-            save_model(args,
-                       saving_folder='model',
-                       saving_name=f'lora-{saving_epoch}.safetensors',
-                       unwrapped_nw=accelerator.unwrap_model(network),
-                       save_dtype=save_dtype)
-            """
             if args.use_position_embedder:
                 save_model(args,
                            saving_folder='position_embedder',
