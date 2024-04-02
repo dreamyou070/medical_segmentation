@@ -97,7 +97,7 @@ def main(args):
         elif "mid" in net[0]:
             params = register_optimizer_param(net[1], net[0], trainable_params=params)
     trainable_params = [{"params": params, "lr": args.learning_rate}]
-    
+
 
     if args.use_position_embedder:
         trainable_params.append({"params": position_embedder.parameters(), "lr": args.learning_rate})
@@ -200,10 +200,7 @@ def main(args):
         for step, batch in enumerate(train_dataloader):
             device = accelerator.device
             loss_dict = {}
-            with torch.set_grad_enabled(True):
-                encoder_hidden_states = text_encoder(batch["input_ids"].to(device))["last_hidden_state"]
-            if args.aggregation_model_d:
-                encoder_hidden_states = encoder_hidden_states[:, :args.n_classes, :]
+            encoder_hidden_states = text_encoder(batch["input_ids"].to(device))["last_hidden_state"]
             image = batch['image'].to(dtype=weight_dtype)  # 1,3,512,512
             gt_flat = batch['gt_flat'].to(dtype=weight_dtype)  # 1,128*128
             gt = batch['gt'].to(dtype=weight_dtype)  # 1,3,256,256
