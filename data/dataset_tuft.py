@@ -93,7 +93,7 @@ class TrainDataset_Seg_Tuft(Dataset):
             for file in files:
                 name, ext = os.path.splitext(file)
                 image_paths.append(os.path.join(rgb_folder, file))
-                gt_paths.append(os.path.join(gt_folder, f'{name}.npy'))
+                gt_paths.append(os.path.join(gt_folder, f'{name}.JPG'))
 
         self.resize_shape = resize_shape
         self.tokenizer = tokenizer
