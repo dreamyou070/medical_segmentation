@@ -87,7 +87,7 @@ class TrainDataset_Seg_Tuft(Dataset):
         for folder in folders :
             folder_dir = os.path.join(self.root_dir, folder)
             folder_res = folder.split('_')[-1]
-            rgb_folder = os.path.join(folder_dir, f'image')
+            rgb_folder = os.path.join(folder_dir, f'xray')
             gt_folder = os.path.join(folder_dir, f'gt') # [128,128]
             files = os.listdir(rgb_folder)
             for file in files:
