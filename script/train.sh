@@ -8,12 +8,12 @@
 
 port_number=51264
 category="medical"
-obj_name="brain"
-trigger_word="brain"
-benchmark="BraTS2020_Segmentation_256"
+obj_name="teeth"
+trigger_word="teeth"
+benchmark="teeth_main"
 layer_name='layer_3'
 sub_folder="up_16_32_64"
-file_name="1_new_data_absolute_pe_segmentation_model_c_use_dice_ce_loss_network_dim_128_weight_decay_vae_train_contrastive_learning"
+file_name="1_segment_with_head_model"
 # --use_instance_norm
 # --binary_test
 
@@ -37,6 +37,4 @@ accelerate launch --config_file ../../../gpu_config/gpu_0_1_2_3_config \
  --mask_res 256 \
  --use_batchnorm \
  --use_dice_ce_loss \
- --optimizer_args weight_decay=0.00005 \
- --vae_train \
- --contrastive_learning
+ --optimizer_args weight_decay=0.00005

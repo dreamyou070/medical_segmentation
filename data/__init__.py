@@ -1,6 +1,6 @@
 import os
 import torch
-from data.dataset_multi import TrainDataset_Seg
+
 from model.tokenizer import load_tokenizer
 
 def call_dataset(args) :
@@ -9,6 +9,14 @@ def call_dataset(args) :
     tokenizer = load_tokenizer(args)
 
     # [2] train & test dataset
+    if args.trigger_word == 'teeth' :
+        from data.dataset_tuft import TrainDataset_Seg_Tuft
+        TrainDataset_Seg = TrainDataset_Seg_Tuft
+
+    else :
+        from data.dataset_multi import TrainDataset_Seg
+        TrainDataset_Seg = TrainDataset_Seg
+
     train_dataset = TrainDataset_Seg(root_dir=args.train_data_path,
                                      resize_shape=[args.resize_shape,args.resize_shape],
                                      tokenizer=tokenizer,
